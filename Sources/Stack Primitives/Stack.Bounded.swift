@@ -190,3 +190,44 @@ extension Stack.Bounded where Element: ~Copyable {
 /// the stack itself provides no thread-safety guarantees.
 extension Stack.Bounded: @unchecked Sendable where Element: Sendable {}
 
+// MARK: - Iteration
+
+extension Stack.Bounded where Element: ~Copyable {
+    /// Calls the given closure for each element in the stack.
+    ///
+    /// Elements are visited from bottom (oldest) to top (newest).
+    ///
+    /// - Parameter body: A closure that receives each element.
+    /// - Complexity: O(n) where n is the number of elements.
+    @inlinable
+    public func forEach<E: Swift.Error>(
+        _ body: (borrowing Element) throws(E) -> Void
+    ) throws(E) {
+        for i in 0..<_count {
+            try unsafe body((storage + i).pointee)
+        }
+    }
+}
+
+// MARK: - Truncate
+
+extension Stack.Bounded where Element: ~Copyable {
+    /// Removes elements beyond the specified count.
+    ///
+    /// If `newCount >= count`, this method has no effect.
+    /// Elements are removed from the top of the stack.
+    ///
+    /// - Parameter newCount: The maximum number of elements to retain.
+    /// - Complexity: O(k) where k is the number of removed elements.
+    @inlinable
+    public mutating func truncate(to newCount: Int) {
+        guard newCount < _count else { return }
+        let targetCount = Swift.max(0, newCount)
+
+        for i in targetCount..<_count {
+            unsafe (storage + i).deinitialize(count: 1)
+        }
+        _count = targetCount
+    }
+}
+

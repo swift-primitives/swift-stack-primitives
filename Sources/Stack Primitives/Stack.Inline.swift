@@ -181,3 +181,50 @@ extension Stack.Inline where Element: ~Copyable {
 /// the stack itself provides no thread-safety guarantees.
 extension Stack.Inline: @unchecked Sendable where Element: Sendable {}
 
+// MARK: - Iteration
+
+extension Stack.Inline where Element: ~Copyable {
+    /// Calls the given closure for each element in the stack.
+    ///
+    /// Elements are visited from bottom (oldest) to top (newest).
+    ///
+    /// - Parameter body: A closure that receives each element.
+    /// - Complexity: O(n) where n is the number of elements.
+    @inlinable
+    public func forEach<E: Swift.Error>(
+        _ body: (borrowing Element) throws(E) -> Void
+    ) throws(E) {
+        for i in 0..<_count {
+            try unsafe body(_readPointerToElement(at: i).pointee)
+        }
+    }
+}
+
+// MARK: - Truncate
+
+extension Stack.Inline where Element: ~Copyable {
+    /// Removes elements beyond the specified count.
+    ///
+    /// If `newCount >= count`, this method has no effect.
+    /// Elements are removed from the top of the stack.
+    ///
+    /// - Parameter newCount: The maximum number of elements to retain.
+    /// - Complexity: O(k) where k is the number of removed elements.
+    @inlinable
+    public mutating func truncate(to newCount: Int) {
+        guard newCount < _count else { return }
+        let targetCount = Swift.max(0, newCount)
+
+        let stride = MemoryLayout<Element>.stride
+        unsafe Swift.withUnsafeMutablePointer(to: &_storage) { storagePtr in
+            let basePtr = UnsafeMutableRawPointer(storagePtr)
+            for i in targetCount..<_count {
+                let elementPtr = unsafe (basePtr + i * stride)
+                    .assumingMemoryBound(to: Element.self)
+                unsafe elementPtr.deinitialize(count: 1)
+            }
+        }
+        _count = targetCount
+    }
+}
+
