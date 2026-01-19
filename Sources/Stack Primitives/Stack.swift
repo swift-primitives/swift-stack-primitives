@@ -258,6 +258,187 @@ public struct Stack<Element: ~Copyable>: ~Copyable {
         }
     }
 
+    // MARK: - Small (SmallVec-style: inline then spill to heap)
+
+    /// A LIFO stack with small-buffer optimization (SmallVec pattern).
+    ///
+    /// `Stack.Small` stores up to `inlineCapacity` elements in inline storage,
+    /// then automatically spills to heap storage when that capacity is exceeded.
+    /// This provides the performance benefits of inline storage for common cases
+    /// while supporting unbounded growth.
+    ///
+    /// ## Example
+    ///
+    /// ```swift
+    /// var stack = Stack<Int>.Small<4>()  // Inline up to 4 elements
+    /// stack.push(1)  // Inline
+    /// stack.push(2)  // Inline
+    /// stack.push(3)  // Inline
+    /// stack.push(4)  // Inline
+    /// stack.push(5)  // Spills to heap, moves all elements
+    /// ```
+    ///
+    /// ## When to Use
+    ///
+    /// Use `Stack.Small` when:
+    /// - Most instances will hold a small number of elements
+    /// - Occasional large instances need to be supported
+    /// - Zero heap allocation for the common case is important
+    ///
+    /// For fixed capacity with no spill, use ``Stack/Inline``.
+    /// For unbounded growth from the start, use ``Stack``.
+    ///
+    /// ## Non-Copyable
+    ///
+    /// `Stack.Small` is unconditionally `~Copyable` (move-only) because it requires
+    /// a deinitializer to clean up inline storage. If you need `Copyable` semantics
+    /// with value generic capacity, use ``Stack`` instead (which always heap-allocates
+    /// and supports conditional `Copyable` conformance).
+    ///
+    /// - Note: This type is declared inside `Stack` (not in an extension) due to a
+    ///   Swift compiler bug where nested types with value generic parameters declared
+    ///   in extensions do not properly inherit `~Copyable` constraints from the outer type.
+    @safe
+    public struct Small<let inlineCapacity: Int>: ~Copyable {
+        /// Maximum element stride supported by inline storage (64 bytes per slot).
+        @usableFromInline
+        static var _maxStride: Int { 64 }
+
+        /// Raw byte storage for inline elements. Each slot is 64 bytes (8 Ints on 64-bit).
+        @usableFromInline
+        var _inline: InlineArray<inlineCapacity, (Int, Int, Int, Int, Int, Int, Int, Int)>
+
+        /// Current element count (valid elements in either inline or heap storage).
+        @usableFromInline
+        var _count: Int
+
+        /// Heap storage when spilled. Nil when using inline storage.
+        @usableFromInline
+        var _heap: Storage?
+
+        /// Cached pointer to heap elements. Only valid when _heap is non-nil.
+        @usableFromInline
+        var _heapPtr: UnsafeMutablePointer<Element>?
+
+        /// Creates an empty small stack.
+        @inlinable
+        public init() {
+            precondition(
+                MemoryLayout<Element>.stride <= Self._maxStride,
+                "Element stride (\(MemoryLayout<Element>.stride)) exceeds inline storage slot size (\(Self._maxStride) bytes). Use Stack.Bounded instead."
+            )
+            precondition(
+                MemoryLayout<Element>.alignment <= MemoryLayout<Int>.alignment,
+                "Element alignment (\(MemoryLayout<Element>.alignment)) exceeds inline storage alignment (\(MemoryLayout<Int>.alignment)). Use Stack.Bounded instead."
+            )
+            self._inline = InlineArray(repeating: (0, 0, 0, 0, 0, 0, 0, 0))
+            self._count = 0
+            self._heap = nil
+            self._heapPtr = nil
+        }
+
+        deinit {
+            let count = _count
+            guard count > 0 else { return }
+
+            if let heap = _heap {
+                // Elements are on heap - Storage handles cleanup via its deinit
+                // But we need to set count for deinit
+                heap.header = count
+            } else {
+                // Elements are inline - clean up manually
+                let stride = MemoryLayout<Element>.stride
+                unsafe Swift.withUnsafeBytes(of: _inline) { bytes in
+                    let basePtr = unsafe UnsafeMutableRawPointer(mutating: bytes.baseAddress!)
+                    for i in 0..<count {
+                        let elementPtr = unsafe (basePtr + i * stride)
+                            .assumingMemoryBound(to: Element.self)
+                        unsafe elementPtr.deinitialize(count: 1)
+                    }
+                }
+            }
+        }
+
+        /// Whether the stack is currently using heap storage.
+        @inlinable
+        public var isSpilled: Bool { _heap != nil }
+
+        // MARK: - Internal Helpers
+
+        /// Returns a mutable pointer to the inline element at the given index.
+        @usableFromInline
+        @unsafe
+        mutating func _inlinePointerToElement(at index: Int) -> UnsafeMutablePointer<Element> {
+            let stride = MemoryLayout<Element>.stride
+            return unsafe Swift.withUnsafeMutablePointer(to: &_inline) { storagePtr in
+                let basePtr = UnsafeMutableRawPointer(storagePtr)
+                let elementPtr = unsafe (basePtr + index * stride)
+                    .assumingMemoryBound(to: Element.self)
+                return unsafe elementPtr
+            }
+        }
+
+        /// Returns a read-only pointer to the inline element at the given index.
+        @usableFromInline
+        @unsafe
+        func _inlineReadPointerToElement(at index: Int) -> UnsafePointer<Element> {
+            let stride = MemoryLayout<Element>.stride
+            return unsafe Swift.withUnsafePointer(to: _inline) { storagePtr in
+                let basePtr = unsafe UnsafeRawPointer(storagePtr)
+                let elementPtr = unsafe (basePtr + index * stride)
+                    .assumingMemoryBound(to: Element.self)
+                return unsafe elementPtr
+            }
+        }
+
+        /// Returns the inline base pointer for element storage.
+        @usableFromInline
+        @unsafe
+        func _inlineBasePointer() -> UnsafePointer<Element> {
+            unsafe Swift.withUnsafePointer(to: _inline) { storagePtr in
+                let basePtr = unsafe UnsafeRawPointer(storagePtr)
+                return unsafe basePtr.assumingMemoryBound(to: Element.self)
+            }
+        }
+
+        /// Returns the mutable inline base pointer for element storage.
+        @usableFromInline
+        @unsafe
+        mutating func _inlineMutableBasePointer() -> UnsafeMutablePointer<Element> {
+            unsafe Swift.withUnsafeMutablePointer(to: &_inline) { storagePtr in
+                let basePtr = UnsafeMutableRawPointer(storagePtr)
+                return unsafe basePtr.assumingMemoryBound(to: Element.self)
+            }
+        }
+
+        /// Spills inline storage to heap.
+        @usableFromInline
+        mutating func _spillToHeap(minimumCapacity: Int) {
+            precondition(_heap == nil, "Already spilled")
+
+            // Create heap storage with growth factor
+            let newCapacity = Swift.max(minimumCapacity, inlineCapacity * 2, 8)
+            let newStorage = Storage.create(minimumCapacity: newCapacity)
+            newStorage.header = _count
+
+            // Move elements from inline to heap
+            let stride = MemoryLayout<Element>.stride
+            _ = unsafe Swift.withUnsafeBytes(of: _inline) { bytes in
+                unsafe newStorage.withUnsafeMutablePointerToElements { heapPtr in
+                    let inlineBase = UnsafeMutableRawPointer(mutating: bytes.baseAddress!)
+                    for i in 0..<_count {
+                        let inlineElement = unsafe (inlineBase + i * stride)
+                            .assumingMemoryBound(to: Element.self)
+                        unsafe (heapPtr + i).initialize(to: inlineElement.move())
+                    }
+                }
+            }
+
+            _heap = newStorage
+            unsafe (_heapPtr = newStorage._elementsPointer)
+        }
+    }
+
     /// A fixed-capacity LIFO stack supporting move-only elements.
     ///
     /// `Stack.Bounded` allocates storage upfront and throws on overflow.
@@ -401,6 +582,10 @@ extension Stack: Copyable where Element: Copyable {}
 /// This enables value semantics with copy-on-write optimization:
 /// copies share storage until mutation.
 extension Stack.Bounded: Copyable where Element: Copyable {}
+
+// Note: Stack.Small is UNCONDITIONALLY ~Copyable due to the deinit requirement
+// for inline storage cleanup. If you need Copyable semantics, use Stack (which
+// always heap-allocates and can be conditionally Copyable).
 
 /// `Stack.Bounded` conforms to `Sequence` when `Element` is `Copyable`.
 ///

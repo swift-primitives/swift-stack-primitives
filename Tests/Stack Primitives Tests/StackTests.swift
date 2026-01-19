@@ -910,3 +910,256 @@ struct StackInlineStressTests {
         #expect(stack.count == 0)
     }
 }
+
+// MARK: - Stack.Small Tests
+
+@Suite("Stack.Small")
+struct StackSmallTests {
+    @Test("Initialize empty stack")
+    func initializeEmptyStack() {
+        let stack = Stack<Int>.Small<4>()
+        #expect(stack.count == 0)
+        #expect(stack.isEmpty == true)
+        #expect(stack.isSpilled == false)
+    }
+
+    @Test("Push and pop within inline capacity")
+    func pushAndPopWithinInlineCapacity() {
+        var stack = Stack<Int>.Small<4>()
+        stack.push(1)
+        stack.push(2)
+        stack.push(3)
+
+        #expect(stack.count == 3)
+        #expect(stack.isSpilled == false)
+
+        #expect(stack.pop() == 3)
+        #expect(stack.pop() == 2)
+        #expect(stack.pop() == 1)
+        #expect(stack.pop() == nil)
+    }
+
+    @Test("Spill to heap when exceeding inline capacity")
+    func spillToHeapWhenExceedingInlineCapacity() {
+        var stack = Stack<Int>.Small<4>()
+
+        // Fill inline capacity
+        for i in 0..<4 {
+            stack.push(i)
+        }
+        #expect(stack.isSpilled == false)
+        #expect(stack.count == 4)
+
+        // This push should trigger spill
+        stack.push(4)
+        #expect(stack.isSpilled == true)
+        #expect(stack.count == 5)
+
+        // Continue pushing
+        stack.push(5)
+        stack.push(6)
+        #expect(stack.count == 7)
+
+        // Pop all in LIFO order
+        #expect(stack.pop() == 6)
+        #expect(stack.pop() == 5)
+        #expect(stack.pop() == 4)
+        #expect(stack.pop() == 3)
+        #expect(stack.pop() == 2)
+        #expect(stack.pop() == 1)
+        #expect(stack.pop() == 0)
+        #expect(stack.pop() == nil)
+    }
+
+    @Test("Peek from inline storage")
+    func peekFromInlineStorage() {
+        var stack = Stack<Int>.Small<4>()
+        stack.push(42)
+
+        #expect(stack.peek() == 42)
+        #expect(stack.count == 1)
+        #expect(stack.isSpilled == false)
+    }
+
+    @Test("Peek from heap storage")
+    func peekFromHeapStorage() {
+        var stack = Stack<Int>.Small<2>()
+        stack.push(1)
+        stack.push(2)
+        stack.push(3) // Triggers spill
+
+        #expect(stack.isSpilled == true)
+        #expect(stack.peek() == 3)
+        #expect(stack.count == 3)
+    }
+
+    @Test("Clear inline storage")
+    func clearInlineStorage() {
+        var stack = Stack<Int>.Small<4>()
+        stack.push(1)
+        stack.push(2)
+        stack.push(3)
+
+        stack.clear()
+        #expect(stack.count == 0)
+        #expect(stack.isEmpty == true)
+        #expect(stack.isSpilled == false)
+    }
+
+    @Test("Clear heap storage")
+    func clearHeapStorage() {
+        var stack = Stack<Int>.Small<2>()
+        stack.push(1)
+        stack.push(2)
+        stack.push(3) // Triggers spill
+
+        stack.clear()
+        #expect(stack.count == 0)
+        #expect(stack.isEmpty == true)
+        // Note: still spilled (doesn't shrink back)
+        #expect(stack.isSpilled == true)
+    }
+
+    @Test("Truncate within inline storage")
+    func truncateWithinInlineStorage() {
+        var stack = Stack<Int>.Small<4>()
+        stack.push(1)
+        stack.push(2)
+        stack.push(3)
+        stack.push(4)
+
+        stack.truncate(to: 2)
+        #expect(stack.count == 2)
+        #expect(stack.pop() == 2)
+        #expect(stack.pop() == 1)
+    }
+
+    @Test("Truncate within heap storage")
+    func truncateWithinHeapStorage() {
+        var stack = Stack<Int>.Small<2>()
+        stack.push(1)
+        stack.push(2)
+        stack.push(3)
+        stack.push(4)
+        stack.push(5)
+
+        stack.truncate(to: 2)
+        #expect(stack.count == 2)
+        #expect(stack.pop() == 2)
+        #expect(stack.pop() == 1)
+    }
+
+    @Test("Span access from inline storage")
+    func spanAccessFromInlineStorage() {
+        var stack = Stack<Int>.Small<4>()
+        stack.push(1)
+        stack.push(2)
+        stack.push(3)
+
+        #expect(stack.span.count == 3)
+        // Elements are bottom to top: 1, 2, 3
+    }
+
+    @Test("Span access from heap storage")
+    func spanAccessFromHeapStorage() {
+        var stack = Stack<Int>.Small<2>()
+        stack.push(1)
+        stack.push(2)
+        stack.push(3)
+
+        #expect(stack.isSpilled == true)
+        #expect(stack.span.count == 3)
+    }
+
+    @Test("ForEach iteration")
+    func forEachIteration() {
+        var stack = Stack<Int>.Small<4>()
+        stack.push(1)
+        stack.push(2)
+        stack.push(3)
+
+        var sum = 0
+        stack.forEach { sum += $0 }
+        #expect(sum == 6)
+    }
+
+    @Test("Capacity property reflects current state")
+    func capacityReflectsCurrentState() {
+        var stack = Stack<Int>.Small<4>()
+        #expect(stack.capacity == 4) // Inline capacity
+
+        stack.push(1)
+        stack.push(2)
+        stack.push(3)
+        stack.push(4)
+        stack.push(5) // Spill
+
+        #expect(stack.capacity >= 5) // Heap capacity (at least 5)
+    }
+}
+
+// MARK: - Stack.Small with Move-Only Elements
+
+@Suite("Stack.Small Move-Only")
+struct StackSmallMoveOnlyTests {
+    struct MoveOnlyValue: ~Copyable {
+        let value: Int
+        init(_ value: Int) { self.value = value }
+    }
+
+    @Test("Push and pop move-only elements within inline capacity")
+    func pushAndPopMoveOnlyWithinInline() {
+        var stack = Stack<MoveOnlyValue>.Small<4>()
+        stack.push(MoveOnlyValue(1))
+        stack.push(MoveOnlyValue(2))
+
+        if let popped = stack.pop() {
+            #expect(popped.value == 2)
+        } else {
+            Issue.record("Expected non-nil value")
+        }
+
+        if let popped = stack.pop() {
+            #expect(popped.value == 1)
+        } else {
+            Issue.record("Expected non-nil value")
+        }
+    }
+
+    @Test("Spill move-only elements to heap")
+    func spillMoveOnlyToHeap() {
+        var stack = Stack<MoveOnlyValue>.Small<2>()
+        stack.push(MoveOnlyValue(1))
+        stack.push(MoveOnlyValue(2))
+        stack.push(MoveOnlyValue(3)) // Triggers spill
+
+        #expect(stack.isSpilled == true)
+
+        if let popped = stack.pop() {
+            #expect(popped.value == 3)
+        } else {
+            Issue.record("Expected non-nil value")
+        }
+    }
+
+    @Test("Peek with move-only elements uses borrowing")
+    func peekWithMoveOnlyElementsUsesBorrowing() {
+        var stack = Stack<MoveOnlyValue>.Small<4>()
+        stack.push(MoveOnlyValue(42))
+
+        let peekedValue = stack.peek { $0.value }
+        #expect(peekedValue == 42)
+        #expect(stack.count == 1)
+    }
+
+    @Test("Clear move-only elements")
+    func clearMoveOnlyElements() {
+        var stack = Stack<MoveOnlyValue>.Small<4>()
+        stack.push(MoveOnlyValue(1))
+        stack.push(MoveOnlyValue(2))
+        stack.push(MoveOnlyValue(3))
+
+        stack.clear()
+        #expect(stack.count == 0)
+    }
+}
