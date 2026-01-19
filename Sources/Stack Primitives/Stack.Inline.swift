@@ -180,3 +180,24 @@ extension Stack.Inline where Element: ~Copyable {
 /// However, concurrent mutation requires external synchronization—
 /// the stack itself provides no thread-safety guarantees.
 extension Stack.Inline: @unchecked Sendable where Element: Sendable {}
+
+// MARK: - ExpressibleByArrayLiteral
+
+extension Stack.Inline: ExpressibleByArrayLiteral where Element: Copyable {
+    /// Creates an inline stack from an array literal.
+    ///
+    /// ```swift
+    /// var stack: Stack<Int>.Inline<8> = [1, 2, 3, 4, 5]
+    /// ```
+    ///
+    /// - Precondition: The number of elements must not exceed the stack's capacity.
+    @inlinable
+    public init(arrayLiteral elements: Element...) {
+        self.init()
+        precondition(elements.count <= Self.capacity,
+            "Array literal has \(elements.count) elements but Stack.Inline capacity is \(Self.capacity)")
+        for element in elements {
+            try! push(element)
+        }
+    }
+}

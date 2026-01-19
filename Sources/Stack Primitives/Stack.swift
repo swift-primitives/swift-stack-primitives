@@ -96,6 +96,19 @@ public struct Stack<Element: ~Copyable>: ~Copyable {
             self._count = 0
         }
 
+        /// Creates an inline stack initialized with elements from a sequence.
+        ///
+        /// - Parameter elements: The elements to push onto the stack.
+        /// - Throws: ``Stack/Inline/Error/overflow`` if the sequence exceeds capacity.
+        /// - Complexity: O(n) where n is the number of elements.
+        @inlinable
+        public init(_ elements: some Sequence<Element>) throws(__StackInlineError) {
+            self.init()
+            for element in elements {
+                try push(element)
+            }
+        }
+
         deinit {
             let count = _count
             guard count > 0 else { return }
@@ -226,6 +239,21 @@ public struct Stack<Element: ~Copyable>: ~Copyable {
             unsafe self.storage = storage
             self.capacity = capacity
             self._count = 0
+        }
+
+        /// Creates a stack initialized with elements from a sequence.
+        ///
+        /// - Parameter capacity: Maximum number of elements. Must be non-negative.
+        /// - Parameter elements: The elements to push onto the stack.
+        /// - Throws: ``Stack/Bounded/Error/invalidCapacity`` if capacity is negative,
+        ///   or ``Stack/Bounded/Error/overflow`` if the sequence exceeds capacity.
+        /// - Complexity: O(n) where n is the number of elements.
+        @inlinable
+        public init(capacity: Int, _ elements: some Sequence<Element>) throws(__StackBoundedError) {
+            try self.init(capacity: capacity)
+            for element in elements {
+                try push(element)
+            }
         }
 
         deinit {
@@ -510,3 +538,20 @@ extension Stack where Element: ~Copyable {
 /// However, concurrent mutation requires external synchronization—
 /// the stack itself provides no thread-safety guarantees.
 extension Stack: @unchecked Sendable where Element: Sendable {}
+
+// MARK: - ExpressibleByArrayLiteral
+
+extension Stack: ExpressibleByArrayLiteral where Element: Copyable {
+    /// Creates a stack from an array literal.
+    ///
+    /// ```swift
+    /// var stack: Stack<Int> = [1, 2, 3, 4, 5]
+    /// ```
+    @inlinable
+    public init(arrayLiteral elements: Element...) {
+        self.init()
+        for element in elements {
+            push(element)
+        }
+    }
+}
