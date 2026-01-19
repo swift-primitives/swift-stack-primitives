@@ -69,8 +69,89 @@
 /// the stack's lifetime.
 @safe
 public struct Stack<Element: ~Copyable>: ~Copyable {
+
+    // MARK: - Unified Storage (nested to inherit Element's ~Copyable context)
+
+    /// Internal storage class for both `Stack` and `Stack.Bounded`.
+    ///
+    /// Uses `ManagedBuffer` for efficient single-allocation storage.
+    /// Declared as a nested class inside `Stack` so that the `Element` generic
+    /// inherits the `~Copyable` suppression from the outer type. This enables
+    /// both `Stack` and `Stack.Bounded` to be conditionally Copyable.
+    ///
+    /// - Note: This must be nested, not module-level, due to Swift's generic
+    ///   constraint propagation limitations with `~Copyable` and nested types.
     @usableFromInline
-    var _storage: _StackStorage<Element>
+    final class Storage: ManagedBuffer<Int, Element> {
+
+        /// Creates empty storage with no capacity.
+        @usableFromInline
+        static func create() -> Storage {
+            let storage = Storage.create(minimumCapacity: 0) { _ in 0 }
+            return unsafe unsafeDowncast(storage, to: Storage.self)
+        }
+
+        /// Creates storage with the specified minimum capacity.
+        @usableFromInline
+        static func create(minimumCapacity: Int) -> Storage {
+            let storage = Storage.create(minimumCapacity: minimumCapacity) { _ in 0 }
+            return unsafe unsafeDowncast(storage, to: Storage.self)
+        }
+
+        deinit {
+            let count = header
+            guard count > 0 else { return }
+            _ = unsafe withUnsafeMutablePointerToElements { elements in
+                for i in 0..<count {
+                    unsafe (elements + i).deinitialize(count: 1)
+                }
+            }
+        }
+
+        /// Returns pointer to element storage.
+        @usableFromInline
+        var _elementsPointer: UnsafeMutablePointer<Element> {
+            unsafe withUnsafeMutablePointerToElements { unsafe $0 }
+        }
+
+        /// Initializes element at the given index.
+        @usableFromInline
+        func _initializeElement(at index: Int, to element: consuming Element) {
+            let ptr = unsafe withUnsafeMutablePointerToElements { unsafe $0 + index }
+            unsafe ptr.initialize(to: element)
+        }
+
+        /// Moves element from the given index.
+        @usableFromInline
+        func _moveElement(at index: Int) -> Element {
+            unsafe withUnsafeMutablePointerToElements { elements in
+                unsafe (elements + index).move()
+            }
+        }
+
+        /// Deinitializes elements in the given range.
+        @usableFromInline
+        func _deinitializeElements(in range: Range<Int>) {
+            _ = unsafe withUnsafeMutablePointerToElements { elements in
+                for i in range {
+                    unsafe (elements + i).deinitialize(count: 1)
+                }
+            }
+        }
+
+        /// Moves all elements to new storage.
+        @usableFromInline
+        func _moveAllElements(to newStorage: Storage, count: Int) {
+            _ = unsafe withUnsafeMutablePointerToElements { old in
+                unsafe newStorage.withUnsafeMutablePointerToElements { new in
+                    unsafe new.moveInitialize(from: old, count: count)
+                }
+            }
+        }
+    }
+
+    @usableFromInline
+    var _storage: Storage
 
     /// Cached pointer to element storage. Stored in struct to enable property-based Span access.
     /// CRITICAL: Must be updated whenever _storage is replaced (reallocation, CoW copy).
@@ -203,6 +284,24 @@ public struct Stack<Element: ~Copyable>: ~Copyable {
     /// For unbounded growth, use ``Stack`` (the canonical type).
     /// For compile-time capacity with zero heap allocation, use ``Stack/Inline``.
     ///
+    /// ## Sequence Conformance
+    ///
+    /// When `Element` is `Copyable`, `Stack.Bounded` conforms to `Sequence`:
+    ///
+    /// ```swift
+    /// var stack = try Stack<Int>.Bounded(capacity: 10)
+    /// try stack.push(1)
+    /// try stack.push(2)
+    /// for element in stack {
+    ///     print(element)  // 1, then 2
+    /// }
+    /// ```
+    ///
+    /// ## Copy-on-Write
+    ///
+    /// When `Element` is `Copyable`, `Stack.Bounded` uses copy-on-write semantics:
+    /// copies share storage until mutation, providing efficient value semantics.
+    ///
     /// ## Move-Only Support
     ///
     /// Both the stack and its elements can be `~Copyable`:
@@ -215,14 +314,15 @@ public struct Stack<Element: ~Copyable>: ~Copyable {
     @safe
     public struct Bounded: ~Copyable {
         @usableFromInline
-        var storage: UnsafeMutablePointer<Element>
+        var _storage: Storage  // Uses unified nested storage class
+
+        /// Cached pointer to element storage. Stored in struct to enable property-based Span access.
+        /// CRITICAL: Must be updated whenever _storage is replaced (CoW copy).
+        @usableFromInline
+        var _cachedPtr: UnsafeMutablePointer<Element>
 
         /// The maximum number of elements the stack can hold.
         public let capacity: Int
-
-        /// The current number of elements in the stack.
-        @usableFromInline
-        var _count: Int
 
         /// Creates a stack with the specified capacity.
         ///
@@ -234,27 +334,12 @@ public struct Stack<Element: ~Copyable>: ~Copyable {
                 throw .invalidCapacity
             }
 
-            if capacity == 0 {
-                unsafe self.storage = UnsafeMutablePointer<Element>(bitPattern: MemoryLayout<Element>.alignment)!
-                self.capacity = 0
-                self._count = 0
-                return
-            }
-
-            let storage = UnsafeMutablePointer<Element>.allocate(capacity: capacity)
-            unsafe self.storage = storage
+            self._storage = Storage.create(minimumCapacity: capacity)
+            unsafe (self._cachedPtr = _storage._elementsPointer)
             self.capacity = capacity
-            self._count = 0
         }
 
-        deinit {
-            for i in 0..<_count {
-                unsafe (storage + i).deinitialize(count: 1)
-            }
-            if capacity > 0 {
-                unsafe storage.deallocate()
-            }
-        }
+        // Note: No deinit needed - Storage handles cleanup
     }
 
     /// Creates an empty stack.
@@ -262,7 +347,7 @@ public struct Stack<Element: ~Copyable>: ~Copyable {
     /// No allocation occurs until the first push.
     @inlinable
     public init() {
-        self._storage = _StackStorage.create()
+        self._storage = Storage.create()
         unsafe (self._cachedPtr = _storage._elementsPointer)
     }
 
@@ -293,14 +378,14 @@ public struct Stack<Element: ~Copyable>: ~Copyable {
         }
 
         if capacity == 0 {
-            self._storage = _StackStorage.create()
+            self._storage = Storage.create()
         } else {
-            self._storage = _StackStorage.create(minimumCapacity: capacity)
+            self._storage = Storage.create(minimumCapacity: capacity)
         }
         unsafe (self._cachedPtr = _storage._elementsPointer)
     }
 
-    // Note: No deinit needed - _StackStorage handles cleanup
+    // Note: No deinit needed - Storage handles cleanup
 }
 
 // MARK: - Conditional Copyable
@@ -310,6 +395,53 @@ public struct Stack<Element: ~Copyable>: ~Copyable {
 /// This enables value semantics with copy-on-write optimization:
 /// copies share storage until mutation.
 extension Stack: Copyable where Element: Copyable {}
+
+/// `Stack.Bounded` is `Copyable` when its elements are `Copyable`.
+///
+/// This enables value semantics with copy-on-write optimization:
+/// copies share storage until mutation.
+extension Stack.Bounded: Copyable where Element: Copyable {}
+
+/// `Stack.Bounded` conforms to `Sequence` when `Element` is `Copyable`.
+///
+/// This enables `for-in` loops, `map`, `filter`, and other sequence operations.
+/// For `~Copyable` elements, use ``forEach(_:)`` instead.
+///
+/// - Note: This conformance must be in the same file as the type declaration
+///   due to a Swift compiler bug where protocol conformances for nested types
+///   in separate files cause `~Copyable` constraint propagation to fail.
+extension Stack.Bounded: Sequence where Element: Copyable {
+
+    /// An iterator over the elements of a bounded stack.
+    public struct Iterator: IteratorProtocol {
+        @usableFromInline
+        let _storage: Stack<Element>.Storage
+
+        @usableFromInline
+        var _index: Int = 0
+
+        @usableFromInline
+        init(storage: Stack<Element>.Storage) {
+            self._storage = storage
+        }
+
+        /// Advances to the next element and returns it, or nil if no next element exists.
+        @inlinable
+        public mutating func next() -> Element? {
+            guard _index < _storage.header else { return nil }
+            defer { _index += 1 }
+            return _storage._readElement(at: _index)
+        }
+    }
+
+    /// Returns an iterator over the elements of the stack.
+    ///
+    /// Elements are yielded from bottom (oldest) to top (newest).
+    @inlinable
+    public func makeIterator() -> Iterator {
+        Iterator(storage: _storage)
+    }
+}
 
 // MARK: - Properties
 
@@ -337,7 +469,7 @@ extension Stack where Element: ~Copyable {
 
         // Growth factor 2.0, minimum capacity 4
         let newCapacity = Swift.max(minimumCapacity, _storage.capacity * 2, 4)
-        let newStorage = _StackStorage<Element>.create(minimumCapacity: newCapacity)
+        let newStorage = Stack<Element>.Storage.create(minimumCapacity: newCapacity)
         let currentCount = _storage.header
 
         _storage._moveAllElements(to: newStorage, count: currentCount)
@@ -400,7 +532,7 @@ extension Stack where Element: ~Copyable {
         _storage.header = 0
 
         if !keepingCapacity {
-            _storage = _StackStorage.create()
+            _storage = Storage.create()
             unsafe (_cachedPtr = _storage._elementsPointer)  // Update cached pointer
         }
     }
@@ -466,7 +598,7 @@ extension Stack where Element: Copyable {
         _storage.header = 0
 
         if !keepingCapacity {
-            _storage = _StackStorage.create()
+            _storage = Storage.create()
             unsafe (_cachedPtr = _storage._elementsPointer)  // Update cached pointer
         }
     }
@@ -642,13 +774,13 @@ extension Stack: Sequence where Element: Copyable {
     /// An iterator over the elements of a stack.
     public struct Iterator: IteratorProtocol {
         @usableFromInline
-        let _storage: _StackStorage<Element>
+        let _storage: Stack<Element>.Storage
 
         @usableFromInline
         var _index: Int = 0
 
         @usableFromInline
-        init(storage: _StackStorage<Element>) {
+        init(storage: Stack<Element>.Storage) {
             self._storage = storage
         }
 
@@ -684,12 +816,12 @@ extension Stack where Element: ~Copyable {
         guard _storage.capacity > currentCount else { return }
 
         if currentCount == 0 {
-            _storage = _StackStorage.create()
+            _storage = Storage.create()
             unsafe (_cachedPtr = _storage._elementsPointer)  // Update cached pointer
             return
         }
 
-        let newStorage = _StackStorage<Element>.create(minimumCapacity: currentCount)
+        let newStorage = Stack<Element>.Storage.create(minimumCapacity: currentCount)
         _storage._moveAllElements(to: newStorage, count: currentCount)
         newStorage.header = currentCount
         _storage = newStorage
@@ -729,12 +861,12 @@ extension Stack where Element: Copyable {
         guard _storage.capacity > currentCount else { return }
 
         if currentCount == 0 {
-            _storage = _StackStorage.create()
+            _storage = Storage.create()
             unsafe (_cachedPtr = _storage._elementsPointer)  // Update cached pointer
             return
         }
 
-        let newStorage = _StackStorage<Element>.create(minimumCapacity: currentCount)
+        let newStorage = Stack<Element>.Storage.create(minimumCapacity: currentCount)
         _storage._copyAllElements(to: newStorage, count: currentCount)
         newStorage.header = currentCount
         _storage = newStorage
@@ -757,5 +889,48 @@ extension Stack where Element: Copyable {
 
         _storage._deinitializeElements(in: targetCount..<currentCount)
         _storage.header = targetCount
+    }
+}
+
+// MARK: - Storage Copyable Helpers
+
+extension Stack.Storage where Element: Copyable {
+
+    /// Creates a copy of this storage with all elements duplicated.
+    @usableFromInline
+    func copy() -> Stack.Storage {
+        let count = header
+        guard count > 0 else {
+            return Stack.Storage.create()
+        }
+
+        let new = Stack.Storage.create(minimumCapacity: capacity)
+        new.header = count
+
+        _ = unsafe withUnsafeMutablePointerToElements { src in
+            unsafe new.withUnsafeMutablePointerToElements { dst in
+                unsafe dst.initialize(from: src, count: count)
+            }
+        }
+
+        return new
+    }
+
+    /// Reads element at the given index.
+    @usableFromInline
+    func _readElement(at index: Int) -> Element {
+        unsafe withUnsafeMutablePointerToElements { elements in
+            unsafe elements[index]
+        }
+    }
+
+    /// Copies all elements to new storage.
+    @usableFromInline
+    func _copyAllElements(to newStorage: Stack.Storage, count: Int) {
+        _ = unsafe withUnsafeMutablePointerToElements { old in
+            unsafe newStorage.withUnsafeMutablePointerToElements { new in
+                unsafe new.initialize(from: old, count: count)
+            }
+        }
     }
 }

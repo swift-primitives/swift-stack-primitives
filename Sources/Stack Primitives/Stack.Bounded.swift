@@ -2,34 +2,32 @@
 //
 // This source file is part of the swift-standards open source project
 //
-// Copyright (c) 2024-2025 Coen ten Thije Boonkkamp and the swift-standards project authors
+// Copyright (c) 2024-2026 Coen ten Thije Boonkkamp and the swift-standards project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE for license information
 //
 // ===----------------------------------------------------------------------===//
 
-extension Stack {
-    
-}
+// Note: Conditional Copyable conformance is in Stack.swift (must be same file as declaration)
 
 // MARK: - Properties
 
 extension Stack.Bounded where Element: ~Copyable {
     /// The current number of elements in the stack.
     @inlinable
-    public var count: Int { _count }
+    public var count: Int { _storage.header }
 
     /// Whether the stack is empty.
     @inlinable
-    public var isEmpty: Bool { _count == 0 }
+    public var isEmpty: Bool { _storage.header == 0 }
 
     /// Whether the stack is full.
     @inlinable
-    public var isFull: Bool { _count == capacity }
+    public var isFull: Bool { _storage.header == capacity }
 }
 
-// MARK: - Core Operations
+// MARK: - Core Operations (Base - for ~Copyable elements)
 
 extension Stack.Bounded where Element: ~Copyable {
     /// Pushes an element onto the stack.
@@ -39,11 +37,12 @@ extension Stack.Bounded where Element: ~Copyable {
     /// - Complexity: O(1)
     @inlinable
     public mutating func push(_ element: consuming Element) throws(__StackBoundedError) {
-        guard _count < capacity else {
+        guard _storage.header < capacity else {
             throw .overflow
         }
-        unsafe (storage + _count).initialize(to: element)
-        _count += 1
+        let index = _storage.header
+        _storage._initializeElement(at: index, to: element)
+        _storage.header += 1
     }
 
     /// Pops and returns the top element, or nil if empty.
@@ -52,11 +51,11 @@ extension Stack.Bounded where Element: ~Copyable {
     /// - Complexity: O(1)
     @inlinable
     public mutating func pop() -> Element? {
-        guard _count > 0 else {
+        guard _storage.header > 0 else {
             return nil
         }
-        _count -= 1
-        return unsafe (storage + _count).move()
+        _storage.header -= 1
+        return _storage._moveElement(at: _storage.header)
     }
 
     /// Removes all elements from the stack.
@@ -66,10 +65,58 @@ extension Stack.Bounded where Element: ~Copyable {
     /// - Complexity: O(n) where n is the number of elements.
     @inlinable
     public mutating func clear() {
-        for i in 0..<_count {
-            unsafe (storage + i).deinitialize(count: 1)
+        let count = _storage.header
+        if count > 0 {
+            _storage._deinitializeElements(in: 0..<count)
         }
-        _count = 0
+        _storage.header = 0
+    }
+}
+
+// MARK: - Copy-on-Write (Copyable elements only)
+
+extension Stack.Bounded where Element: Copyable {
+    /// Ensures the storage is uniquely referenced before mutation.
+    @usableFromInline
+    mutating func makeUnique() {
+        if !isKnownUniquelyReferenced(&_storage) {
+            _storage = _storage.copy()
+            unsafe (_cachedPtr = _storage._elementsPointer)  // CRITICAL: Update cached pointer
+        }
+    }
+
+    /// Pushes an element onto the stack (CoW-aware).
+    @inlinable
+    public mutating func push(_ element: Element) throws(__StackBoundedError) {
+        makeUnique()
+        guard _storage.header < capacity else {
+            throw .overflow
+        }
+        let index = _storage.header
+        _storage._initializeElement(at: index, to: element)
+        _storage.header += 1
+    }
+
+    /// Pops and returns the top element, or nil if empty (CoW-aware).
+    @inlinable
+    public mutating func pop() -> Element? {
+        makeUnique()
+        guard _storage.header > 0 else {
+            return nil
+        }
+        _storage.header -= 1
+        return _storage._moveElement(at: _storage.header)
+    }
+
+    /// Removes all elements from the stack (CoW-aware).
+    @inlinable
+    public mutating func clear() {
+        makeUnique()
+        let count = _storage.header
+        if count > 0 {
+            _storage._deinitializeElements(in: 0..<count)
+        }
+        _storage.header = 0
     }
 }
 
@@ -77,134 +124,103 @@ extension Stack.Bounded where Element: ~Copyable {
 
 extension Stack.Bounded where Element: ~Copyable {
     /// Peeks at the top element without removing it.
-    ///
-    /// Uses a closure to support `~Copyable` elements via borrowing.
-    ///
-    /// - Parameter body: A closure that receives a borrowed reference to the top element.
-    /// - Returns: The result of the closure, or `nil` if the stack is empty.
-    /// - Complexity: O(1)
     @inlinable
-    public func peek<R, E: Swift.Error>(_ body: (borrowing Element) throws(E) -> R) throws(E) -> R? {
-        guard _count > 0 else {
+    public func peek<R>(_ body: (borrowing Element) -> R) -> R? {
+        guard _storage.header > 0 else {
             return nil
         }
-        return try unsafe body((storage + _count - 1).pointee)
+        return unsafe body((_cachedPtr + _storage.header - 1).pointee)
     }
 }
 
 extension Stack.Bounded where Element: Copyable {
     /// Returns the top element without removing it, or nil if empty.
-    ///
-    /// This is a convenience method for `Copyable` elements. For `~Copyable`
-    /// elements, use ``peek(_:)`` with a closure.
-    ///
-    /// - Returns: A copy of the top element, or `nil` if the stack is empty.
-    /// - Complexity: O(1)
     @inlinable
     public func peek() -> Element? {
-        guard _count > 0 else {
+        guard _storage.header > 0 else {
             return nil
         }
-        return unsafe (storage + _count - 1).pointee
+        return _storage._readElement(at: _storage.header - 1)
     }
 }
 
 // MARK: - Span Access
 
 extension Stack.Bounded where Element: ~Copyable {
-    /// Read-only span of the stack elements.
-    ///
-    /// Elements are ordered from bottom (index 0) to top (index count-1).
-    ///
-    /// ## Lifetime Contract
-    ///
-    /// - The span is valid ONLY for the duration of the borrow of `self`.
-    /// - The span MUST NOT be stored, returned, or allowed to escape.
-    @inlinable
+    /// A read-only view of the stack's elements.
     public var span: Span<Element> {
         @_lifetime(borrow self)
+        @inlinable
         borrowing get {
-            unsafe Span(_unsafeStart: storage, count: _count)
+            unsafe Span(_unsafeStart: _cachedPtr, count: _storage.header)
         }
     }
 
-    /// Mutable span of the stack elements.
-    ///
-    /// Elements are ordered from bottom (index 0) to top (index count-1).
-    ///
-    /// ## Lifetime Contract
-    ///
-    /// - The span is valid ONLY for the duration of the exclusive mutable borrow.
-    /// - The span MUST NOT be stored, returned, or allowed to escape.
-    @inlinable
+    /// A mutable view of the stack's elements.
     public var mutableSpan: MutableSpan<Element> {
         @_lifetime(&self)
+        @inlinable
         mutating get {
-            unsafe MutableSpan(_unsafeStart: storage, count: _count)
+            unsafe MutableSpan(_unsafeStart: _cachedPtr, count: _storage.header)
         }
     }
 }
 
+// MARK: - CoW-aware MutableSpan (Copyable elements)
 
+extension Stack.Bounded where Element: Copyable {
+    /// A mutable view of the stack's elements (CoW-aware).
+    public var mutableSpan: MutableSpan<Element> {
+        @_lifetime(&self)
+        @inlinable
+        mutating get {
+            makeUnique()
+            return unsafe MutableSpan(_unsafeStart: _cachedPtr, count: _storage.header)
+        }
+    }
+}
 
 // MARK: - Pointer Access (Escape Hatch)
 
 extension Stack.Bounded where Element: ~Copyable {
     /// Provides read-only pointer access to the element at the specified index.
-    ///
-    /// - Warning: This is an escape hatch for C interop. Prefer `span` for safe access.
-    /// - Warning: The pointer must not escape the closure scope.
     @_spi(Unsafe)
     @unsafe
     @inlinable
-    public func withUnsafePointer<R, E: Swift.Error>(
+    public func withUnsafePointer<R>(
         at index: Int,
-        _ body: (UnsafePointer<Element>) throws(E) -> R
-    ) throws(E) -> R {
-        precondition(index >= 0 && index < _count)
-        return try unsafe body(storage + index)
+        _ body: (UnsafePointer<Element>) -> R
+    ) -> R {
+        precondition(index >= 0 && index < _storage.header)
+        return unsafe body(_cachedPtr + index)
     }
 
     /// Provides mutable pointer access to the element at the specified index.
-    ///
-    /// - Warning: This is an escape hatch for C interop. Prefer `mutableSpan` for safe access.
-    /// - Warning: The pointer must not escape the closure scope.
     @_spi(Unsafe)
     @unsafe
     @inlinable
-    public mutating func withUnsafeMutablePointer<R, E: Swift.Error>(
+    public mutating func withUnsafeMutablePointer<R>(
         at index: Int,
-        _ body: (UnsafeMutablePointer<Element>) throws(E) -> R
-    ) throws(E) -> R {
-        precondition(index >= 0 && index < _count)
-        return try unsafe body(storage + index)
+        _ body: (UnsafeMutablePointer<Element>) -> R
+    ) -> R {
+        precondition(index >= 0 && index < _storage.header)
+        return unsafe body(_cachedPtr + index)
     }
 }
 
 // MARK: - Sendable
 
-/// `Stack.Bounded` is `Sendable` when its elements are `Sendable`.
-///
-/// This conformance allows the stack to be transferred between tasks.
-/// However, concurrent mutation requires external synchronization—
-/// the stack itself provides no thread-safety guarantees.
 extension Stack.Bounded: @unchecked Sendable where Element: Sendable {}
 
-// MARK: - Iteration
+// MARK: - Iteration (for ~Copyable elements)
 
 extension Stack.Bounded where Element: ~Copyable {
     /// Calls the given closure for each element in the stack.
-    ///
-    /// Elements are visited from bottom (oldest) to top (newest).
-    ///
-    /// - Parameter body: A closure that receives each element.
-    /// - Complexity: O(n) where n is the number of elements.
     @inlinable
-    public func forEach<E: Swift.Error>(
-        _ body: (borrowing Element) throws(E) -> Void
-    ) throws(E) {
-        for i in 0..<_count {
-            try unsafe body((storage + i).pointee)
+    public func forEach(_ body: (borrowing Element) -> Void) {
+        let count = _storage.header
+        for i in 0..<count {
+            body(unsafe (_cachedPtr + i).pointee)
         }
     }
 }
@@ -213,21 +229,32 @@ extension Stack.Bounded where Element: ~Copyable {
 
 extension Stack.Bounded where Element: ~Copyable {
     /// Removes elements beyond the specified count.
-    ///
-    /// If `newCount >= count`, this method has no effect.
-    /// Elements are removed from the top of the stack.
-    ///
-    /// - Parameter newCount: The maximum number of elements to retain.
-    /// - Complexity: O(k) where k is the number of removed elements.
     @inlinable
     public mutating func truncate(to newCount: Int) {
-        guard newCount < _count else { return }
+        let currentCount = _storage.header
+        guard newCount < currentCount else { return }
         let targetCount = Swift.max(0, newCount)
 
-        for i in targetCount..<_count {
-            unsafe (storage + i).deinitialize(count: 1)
-        }
-        _count = targetCount
+        _storage._deinitializeElements(in: targetCount..<currentCount)
+        _storage.header = targetCount
     }
 }
 
+// MARK: - CoW-aware Truncate (Copyable elements)
+
+extension Stack.Bounded where Element: Copyable {
+    /// Removes elements beyond the specified count (CoW-aware).
+    @inlinable
+    public mutating func truncate(to newCount: Int) {
+        makeUnique()
+        let currentCount = _storage.header
+        guard newCount < currentCount else { return }
+        let targetCount = Swift.max(0, newCount)
+
+        _storage._deinitializeElements(in: targetCount..<currentCount)
+        _storage.header = targetCount
+    }
+}
+
+// Note: Sequence conformance for Stack.Bounded is in Stack.swift
+// (must be in same file as declaration due to Swift compiler bug with ~Copyable)
