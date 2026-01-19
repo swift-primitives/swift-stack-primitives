@@ -533,33 +533,34 @@ struct StackInlineTests {
         #expect(stack.isFull == true)
     }
 
-    @Test("withElement provides read-only indexed access")
-    func withElementProvidesReadOnlyAccess() throws {
+    @Test("span provides read-only indexed access")
+    func spanProvidesReadOnlyIndexedAccess() throws {
         var stack = Stack<Int>.Inline<4>()
         try stack.push(1)
         try stack.push(2)
         try stack.push(3)
 
         // Index 0 is bottom, index 2 is top
-        let bottom = stack.withElement(at: 0) { $0 }
-        let middle = stack.withElement(at: 1) { $0 }
-        let top = stack.withElement(at: 2) { $0 }
+        let s = stack.span
+        let bottom = s[0]
+        let middle = s[1]
+        let top = s[2]
 
         #expect(bottom == 1)
         #expect(middle == 2)
         #expect(top == 3)
     }
 
-    @Test("withMutableElement provides mutable indexed access")
-    func withMutableElementProvidesMutableAccess() throws {
+    @Test("mutableSpan provides mutable indexed access")
+    func mutableSpanProvidesMutableIndexedAccess() throws {
         var stack = Stack<Int>.Inline<4>()
         try stack.push(1)
         try stack.push(2)
         try stack.push(3)
 
-        stack.withMutableElement(at: 0) { $0 = 10 }
-        stack.withMutableElement(at: 1) { $0 = 20 }
-        stack.withMutableElement(at: 2) { $0 = 30 }
+        stack.mutableSpan[0] = 10
+        stack.mutableSpan[1] = 20
+        stack.mutableSpan[2] = 30
 
         #expect(stack.pop() == 30)
         #expect(stack.pop() == 20)
@@ -835,17 +836,17 @@ struct StackInlineStressTests {
         #expect(stack.isEmpty == true)
     }
 
-    @Test("withMutableElement modification stress test")
-    func withMutableElementModificationStress() throws {
+    @Test("mutableSpan modification stress test")
+    func mutableSpanModificationStress() throws {
         var stack = Stack<Int>.Inline<16>()
 
         for i in 0..<16 {
             try stack.push(i)
         }
 
-        // Modify all elements via withMutableElement
+        // Modify all elements via mutableSpan
         for i in 0..<16 {
-            stack.withMutableElement(at: i) { $0 = $0 * 2 }
+            stack.mutableSpan[i] = stack.mutableSpan[i] * 2
         }
 
         // Verify modifications in LIFO order

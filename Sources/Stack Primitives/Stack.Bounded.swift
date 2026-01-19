@@ -145,78 +145,16 @@ extension Stack.Bounded where Element: ~Copyable {
     }
 }
 
-// MARK: - Closure-Based Span Access
 
-extension Stack.Bounded where Element: ~Copyable {
-    /// Provides read-only span access to the stack elements via closure.
-    ///
-    /// - Parameter body: A closure that receives the span.
-    /// - Returns: The result of the closure.
-    @inlinable
-    public func withSpan<R, E: Swift.Error>(
-        _ body: (Span<Element>) throws(E) -> R
-    ) throws(E) -> R {
-        try body(span)
-    }
-
-    /// Provides mutable span access to the stack elements via closure.
-    ///
-    /// - Parameter body: A closure that receives the mutable span.
-    /// - Returns: The result of the closure.
-    @inlinable
-    public mutating func withMutableSpan<R, E: Swift.Error>(
-        _ body: (inout MutableSpan<Element>) throws(E) -> R
-    ) throws(E) -> R {
-        var s = mutableSpan
-        return try body(&s)
-    }
-}
-
-// MARK: - Indexed Element Access
-
-extension Stack.Bounded where Element: ~Copyable {
-    /// Provides read-only access to an element at the specified index.
-    ///
-    /// Index 0 is the bottom of the stack, index (count-1) is the top.
-    ///
-    /// - Parameter index: The index of the element (0..<count).
-    /// - Parameter body: A closure that receives a borrowed reference to the element.
-    /// - Returns: The result of the closure.
-    /// - Precondition: `index >= 0 && index < count`
-    @inlinable
-    public func withElement<R, E: Swift.Error>(
-        at index: Int,
-        _ body: (borrowing Element) throws(E) -> R
-    ) throws(E) -> R {
-        precondition(index >= 0 && index < _count, "Index out of bounds")
-        return try unsafe body((storage + index).pointee)
-    }
-
-    /// Provides mutable access to an element at the specified index.
-    ///
-    /// Index 0 is the bottom of the stack, index (count-1) is the top.
-    ///
-    /// - Parameter index: The index of the element (0..<count).
-    /// - Parameter body: A closure that receives a mutable reference to the element.
-    /// - Returns: The result of the closure.
-    /// - Precondition: `index >= 0 && index < count`
-    @inlinable
-    public mutating func withMutableElement<R, E: Swift.Error>(
-        at index: Int,
-        _ body: (inout Element) throws(E) -> R
-    ) throws(E) -> R {
-        precondition(index >= 0 && index < _count, "Index out of bounds")
-        return try unsafe body(&(storage + index).pointee)
-    }
-}
 
 // MARK: - Pointer Access (Escape Hatch)
 
 extension Stack.Bounded where Element: ~Copyable {
     /// Provides read-only pointer access to the element at the specified index.
     ///
-    /// - Warning: This is an escape hatch for C interop. Prefer `span` or `withElement` for safe access.
+    /// - Warning: This is an escape hatch for C interop. Prefer `span` for safe access.
     /// - Warning: The pointer must not escape the closure scope.
+    @_spi(Unsafe)
     @unsafe
     @inlinable
     public func withUnsafePointer<R, E: Swift.Error>(
@@ -229,8 +167,9 @@ extension Stack.Bounded where Element: ~Copyable {
 
     /// Provides mutable pointer access to the element at the specified index.
     ///
-    /// - Warning: This is an escape hatch for C interop. Prefer `mutableSpan` or `withMutableElement` for safe access.
+    /// - Warning: This is an escape hatch for C interop. Prefer `mutableSpan` for safe access.
     /// - Warning: The pointer must not escape the closure scope.
+    @_spi(Unsafe)
     @unsafe
     @inlinable
     public mutating func withUnsafeMutablePointer<R, E: Swift.Error>(

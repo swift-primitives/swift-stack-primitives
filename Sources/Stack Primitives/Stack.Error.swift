@@ -11,9 +11,12 @@
 
 // MARK: - Hoisted Error Types (Module Level)
 //
-// Swift does not allow convenient access to nested types inside generic types.
-// These error types are hoisted to module level per API-NAME-001 and exposed
-// via typealiases to provide the expected Nest.Name API.
+// Swift does not allow nested types inside generic types to be easily accessed.
+// These error types are hoisted to module level and exposed via typealiases to
+// provide the expected Nest.Name API (Stack.Error, Stack.Bounded.Error, etc.).
+//
+// This is a documented exception per [API-EXC-001] due to Swift language
+// limitations with generic nested types.
 //
 // Use the typealias forms in your code:
 // - Stack<Element>.Error
