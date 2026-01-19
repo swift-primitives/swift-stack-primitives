@@ -96,19 +96,6 @@ public struct Stack<Element: ~Copyable>: ~Copyable {
             self._count = 0
         }
 
-        /// Creates an inline stack initialized with elements from a sequence.
-        ///
-        /// - Parameter elements: The elements to push onto the stack.
-        /// - Throws: ``Stack/Inline/Error/overflow`` if the sequence exceeds capacity.
-        /// - Complexity: O(n) where n is the number of elements.
-        @inlinable
-        public init(_ elements: some Sequence<Element>) throws(__StackInlineError) {
-            self.init()
-            for element in elements {
-                try push(element)
-            }
-        }
-
         deinit {
             let count = _count
             guard count > 0 else { return }
@@ -239,21 +226,6 @@ public struct Stack<Element: ~Copyable>: ~Copyable {
             unsafe self.storage = storage
             self.capacity = capacity
             self._count = 0
-        }
-
-        /// Creates a stack initialized with elements from a sequence.
-        ///
-        /// - Parameter capacity: Maximum number of elements. Must be non-negative.
-        /// - Parameter elements: The elements to push onto the stack.
-        /// - Throws: ``Stack/Bounded/Error/invalidCapacity`` if capacity is negative,
-        ///   or ``Stack/Bounded/Error/overflow`` if the sequence exceeds capacity.
-        /// - Complexity: O(n) where n is the number of elements.
-        @inlinable
-        public init(capacity: Int, _ elements: some Sequence<Element>) throws(__StackBoundedError) {
-            try self.init(capacity: capacity)
-            for element in elements {
-                try push(element)
-            }
         }
 
         deinit {
