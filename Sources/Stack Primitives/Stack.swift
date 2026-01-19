@@ -539,19 +539,3 @@ extension Stack where Element: ~Copyable {
 /// the stack itself provides no thread-safety guarantees.
 extension Stack: @unchecked Sendable where Element: Sendable {}
 
-// MARK: - ExpressibleByArrayLiteral
-
-extension Stack: ExpressibleByArrayLiteral where Element: Copyable {
-    /// Creates a stack from an array literal.
-    ///
-    /// ```swift
-    /// var stack: Stack<Int> = [1, 2, 3, 4, 5]
-    /// ```
-    @inlinable
-    public init(arrayLiteral elements: Element...) {
-        self.init()
-        for element in elements {
-            push(element)
-        }
-    }
-}

@@ -190,22 +190,3 @@ extension Stack.Bounded where Element: ~Copyable {
 /// the stack itself provides no thread-safety guarantees.
 extension Stack.Bounded: @unchecked Sendable where Element: Sendable {}
 
-// MARK: - ExpressibleByArrayLiteral
-
-extension Stack.Bounded: ExpressibleByArrayLiteral where Element: Copyable {
-    /// Creates a bounded stack from an array literal with exact-fit capacity.
-    ///
-    /// The stack's capacity is set to the number of elements in the literal.
-    ///
-    /// ```swift
-    /// var stack: Stack<Int>.Bounded = [1, 2, 3, 4, 5]  // capacity = 5
-    /// ```
-    @inlinable
-    public init(arrayLiteral elements: Element...) {
-        // Safe to use try! because capacity = elements.count, so no overflow possible
-        try! self.init(capacity: elements.count)
-        for element in elements {
-            try! push(element)
-        }
-    }
-}
