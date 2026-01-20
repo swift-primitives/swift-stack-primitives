@@ -181,6 +181,13 @@ public struct Stack<Element: ~Copyable>: ~Copyable {
         @usableFromInline
         var _count: Int
 
+        /// Workaround for Swift compiler bug where deinit element cleanup
+        /// fails for ~Copyable structs that contain only value-type properties.
+        /// Adding a reference type property (`AnyObject?`) fixes the bug.
+        /// See: https://github.com/swiftlang/swift/issues/86652
+        @usableFromInline
+        var _deinitWorkaround: AnyObject? = nil
+
         /// Creates an empty inline stack.
         @inlinable
         public init() {
@@ -200,9 +207,13 @@ public struct Stack<Element: ~Copyable>: ~Copyable {
             let count = _count
             guard count > 0 else { return }
 
+            // Workaround: Copy storage state to local vars before cleanup.
+            // The _storage access through withUnsafeBytes may be optimized incorrectly
+            // for ~Copyable structs without reference type properties.
             let stride = MemoryLayout<Element>.stride
-            unsafe Swift.withUnsafeBytes(of: _storage) { bytes in
-                let basePtr = unsafe UnsafeMutableRawPointer(mutating: bytes.baseAddress!)
+
+            unsafe Swift.withUnsafePointer(to: _storage) { storagePtr in
+                let basePtr = UnsafeMutableRawPointer(mutating: UnsafeRawPointer(storagePtr))
                 for i in 0..<count {
                     let elementPtr = unsafe (basePtr + i * stride)
                         .assumingMemoryBound(to: Element.self)
