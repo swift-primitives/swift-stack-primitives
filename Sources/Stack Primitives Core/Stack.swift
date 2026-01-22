@@ -548,7 +548,7 @@ public struct Stack<Element: ~Copyable>: ~Copyable {
     /// - Parameter elements: The elements to push onto the stack.
     /// - Complexity: O(n) where n is the number of elements.
     @inlinable
-    public init(_ elements: some Sequence<Element>) {
+    public init(_ elements: some Swift.Sequence<Element>) {
         self.init()
         for element in elements {
             push(element)
@@ -606,7 +606,7 @@ extension Stack.Bounded: Copyable where Element: Copyable {}
 /// - Note: This conformance must be in the same file as the type declaration
 ///   due to a Swift compiler bug where protocol conformances for nested types
 ///   in separate files cause `~Copyable` constraint propagation to fail.
-extension Stack.Bounded: Sequence where Element: Copyable {
+extension Stack.Bounded: Swift.Sequence where Element: Copyable {
 
     /// An iterator over the elements of a bounded stack.
     public struct Iterator: IteratorProtocol {
@@ -614,7 +614,7 @@ extension Stack.Bounded: Sequence where Element: Copyable {
         let _storage: Stack<Element>.Storage
 
         @usableFromInline
-        var _index: Int = 0
+        var _index: Stack<Element>.Index = .zero
 
         @usableFromInline
         init(storage: Stack<Element>.Storage) {
@@ -624,9 +624,10 @@ extension Stack.Bounded: Sequence where Element: Copyable {
         /// Advances to the next element and returns it, or nil if no next element exists.
         @inlinable
         public mutating func next() -> Element? {
-            guard _index < _storage.header else { return nil }
-            defer { _index += 1 }
-            return _storage._readElement(at: _index)
+            guard _index.position.rawValue < _storage.header else { return nil }
+            let currentIndex = _index.position.rawValue
+            _index = (_index + 1)!
+            return _storage._readElement(at: currentIndex)
         }
     }
 
@@ -634,9 +635,13 @@ extension Stack.Bounded: Sequence where Element: Copyable {
     ///
     /// Elements are yielded from bottom (oldest) to top (newest).
     @inlinable
-    public func makeIterator() -> Iterator {
+    public borrowing func makeIterator() -> Iterator {
         Iterator(storage: _storage)
     }
+
+    /// The underestimated count for `Sequence` conformance.
+    @inlinable
+    public var underestimatedCount: Int { _storage.header }
 }
 
 // MARK: - Properties
@@ -903,12 +908,12 @@ extension Stack where Element: ~Copyable {
     @unsafe
     @inlinable
     public func withUnsafePointer<R>(
-        at index: Int,
+        at index: Index,
         _ body: (UnsafePointer<Element>) -> R
     ) -> R {
-        precondition(index >= 0 && index < _storage.header)
+        precondition(index >= .zero && index.position.rawValue < _storage.header)
         return unsafe _storage.withUnsafeMutablePointerToElements { elements in
-            unsafe body(elements + index)
+            unsafe body(elements + index.position.rawValue)
         }
     }
 
@@ -920,12 +925,12 @@ extension Stack where Element: ~Copyable {
     @unsafe
     @inlinable
     public mutating func withUnsafeMutablePointer<R>(
-        at index: Int,
+        at index: Index,
         _ body: (UnsafeMutablePointer<Element>) -> R
     ) -> R {
-        precondition(index >= 0 && index < _storage.header)
+        precondition(index >= .zero && index.position.rawValue < _storage.header)
         return unsafe _storage.withUnsafeMutablePointerToElements { elements in
-            unsafe body(elements + index)
+            unsafe body(elements + index.position.rawValue)
         }
     }
 }
@@ -965,7 +970,7 @@ extension Stack where Element: ~Copyable {
 ///
 /// This enables `for-in` loops, `map`, `filter`, and other sequence operations.
 /// For `~Copyable` elements, use ``forEach(_:)`` instead.
-extension Stack: Sequence where Element: Copyable {
+extension Stack: Swift.Sequence where Element: Copyable {
 
     /// An iterator over the elements of a stack.
     public struct Iterator: IteratorProtocol {
@@ -973,7 +978,7 @@ extension Stack: Sequence where Element: Copyable {
         let _storage: Stack<Element>.Storage
 
         @usableFromInline
-        var _index: Int = 0
+        var _index: Stack<Element>.Index = .zero
 
         @usableFromInline
         init(storage: Stack<Element>.Storage) {
@@ -983,9 +988,10 @@ extension Stack: Sequence where Element: Copyable {
         /// Advances to the next element and returns it, or nil if no next element exists.
         @inlinable
         public mutating func next() -> Element? {
-            guard _index < _storage.header else { return nil }
-            defer { _index += 1 }
-            return _storage._readElement(at: _index)
+            guard _index.position.rawValue < _storage.header else { return nil }
+            let currentIndex = _index.position.rawValue
+            _index = (_index + 1)!
+            return _storage._readElement(at: currentIndex)
         }
     }
 
@@ -993,9 +999,13 @@ extension Stack: Sequence where Element: Copyable {
     ///
     /// Elements are yielded from bottom (oldest) to top (newest).
     @inlinable
-    public func makeIterator() -> Iterator {
+    public borrowing func makeIterator() -> Iterator {
         Iterator(storage: _storage)
     }
+
+    /// The underestimated count for `Sequence` conformance.
+    @inlinable
+    public var underestimatedCount: Int { _storage.header }
 }
 
 // MARK: - Capacity Management (Additional)

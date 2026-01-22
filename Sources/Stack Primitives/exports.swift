@@ -1,6 +1,6 @@
 // exports.swift
-// Re-export dependencies for consumers.
+// Re-export internal modules for consumers.
+// Users import Stack_Primitives and get everything.
 
-@_exported import Index_Primitives
-@_exported import Collection_Primitives
-@_exported import Input_Primitives
+@_exported public import Stack_Primitives_Core
+@_exported public import Stack_Primitives_Sequence

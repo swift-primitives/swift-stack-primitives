@@ -21,14 +21,33 @@ let package = Package(
         .package(path: "../swift-index-primitives"),
         .package(path: "../swift-collection-primitives"),
         .package(path: "../swift-input-primitives"),
+        .package(path: "../swift-sequence-primitives"),
     ],
     targets: [
+        // Internal: Core types with ~Copyable support (includes Swift.Sequence conformances)
         .target(
-            name: "Stack Primitives",
+            name: "Stack Primitives Core",
             dependencies: [
                 .product(name: "Index Primitives", package: "swift-index-primitives"),
                 .product(name: "Collection Primitives", package: "swift-collection-primitives"),
                 .product(name: "Input Primitives", package: "swift-input-primitives"),
+            ]
+        ),
+        // Internal: Sequence.Protocol conformances (Element: Copyable)
+        // Separate module to avoid constraint poisoning on Core types
+        .target(
+            name: "Stack Primitives Sequence",
+            dependencies: [
+                "Stack Primitives Core",
+                .product(name: "Sequence Primitives", package: "swift-sequence-primitives"),
+            ]
+        ),
+        // Public: Re-exports Core and Sequence for users
+        .target(
+            name: "Stack Primitives",
+            dependencies: [
+                "Stack Primitives Core",
+                "Stack Primitives Sequence",
             ]
         ),
         .testTarget(
