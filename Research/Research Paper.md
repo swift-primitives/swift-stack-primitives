@@ -156,7 +156,7 @@ To understand why `Sequence` conformance fails for `~Copyable` containers, we mu
 1. `Sequence` is defined as a protocol with no explicit `Copyable` constraint
 2. However, all protocol conforming types inherit `Copyable` by default (per SE-0427)
 3. The `Sequence` protocol itself has not been updated with `~Copyable` suppression
-4. Therefore, `extension MyType: Sequence` requires `MyType: Copyable`
+4. Therefore, `extension MyType: Swift.Sequence` requires `MyType: Copyable`
 
 This reveals that the barrier is not in `Sequence`'s explicit requirements but in Swift's default conformance rules applied to pre-SE-0427 protocols.
 
@@ -260,7 +260,7 @@ struct Stack<Element: ~Copyable>: ~Copyable {
     // ... implementation with deinit
 }
 
-extension Stack: Sequence {
+extension Stack: Swift.Sequence {
     // ...
 }
 ```
@@ -301,7 +301,7 @@ struct Stack<Element: ~Copyable>: ~Copyable {
 }
 
 extension Stack: Copyable where Element: Copyable {}  // ✓ Compiles
-extension Stack: Sequence where Element: Copyable {}  // ✓ Compiles
+extension Stack: Swift.Sequence where Element: Copyable {}  // ✓ Compiles
 ```
 
 **Result:** Both extensions compile successfully. The class holds the `deinit`; the struct can be conditionally `Copyable`.
@@ -642,7 +642,7 @@ extension Stack where Element: Copyable {
 
 // MARK: - Sequence (when Copyable)
 
-extension Stack: Sequence where Element: Copyable {
+extension Stack: Swift.Sequence where Element: Copyable {
 
     public struct Iterator: IteratorProtocol {
         @usableFromInline

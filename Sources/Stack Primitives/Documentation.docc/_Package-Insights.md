@@ -176,7 +176,7 @@ struct Stack<Element: ~Copyable>: ~Copyable {
 }
 
 extension Stack: Copyable where Element: Copyable {}  // Now possible!
-extension Stack: Sequence where Element: Copyable {}  // Enabled!
+extension Stack: Swift.Sequence where Element: Copyable {}  // Enabled!
 ```
 
 ### The CoW Requirement
@@ -261,7 +261,7 @@ struct Stack<Element: ~Copyable>: ~Copyable {
 }
 
 // File: Bounded.swift
-extension Stack.Bounded: Sequence where Element: Copyable { }  // Breaks ptr!
+extension Stack.Bounded: Swift.Sequence where Element: Copyable { }  // Breaks ptr!
 ```
 
 ### The Rule

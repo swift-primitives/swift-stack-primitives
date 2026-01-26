@@ -288,7 +288,7 @@ extension Stack where Element: ~Copyable {
 ```swift
 extension Stack where Element: Copyable {
     /// Pushes elements from a sequence onto the stack.
-    public mutating func append(contentsOf elements: some Sequence<Element>)
+    public mutating func append(contentsOf elements: some Swift.Sequence<Element>)
 }
 ```
 

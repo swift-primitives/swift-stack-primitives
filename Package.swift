@@ -33,7 +33,7 @@ let package = Package(
                 .product(name: "Input Primitives", package: "swift-input-primitives"),
             ]
         ),
-        // Internal: Sequence.Protocol conformances (Element: Copyable)
+        // Internal: Swift.Sequence.Protocol conformances (Element: Copyable)
         // Separate module to avoid constraint poisoning on Core types
         .target(
             name: "Stack Primitives Sequence",

@@ -256,5 +256,5 @@ extension Stack.Bounded where Element: Copyable {
     }
 }
 
-// Note: Sequence conformance for Stack.Bounded is in Stack.swift
+// Note: Swift.Sequence conformance for Stack.Bounded is in Stack.swift
 // (must be in same file as declaration due to Swift compiler bug with ~Copyable)
