@@ -170,13 +170,9 @@ public struct Stack<Element: ~Copyable>: ~Copyable {
     ///   Swift compiler bug where nested types with value generic parameters declared
     ///   in extensions do not properly inherit `~Copyable` constraints from the outer type.
     public struct Inline<let capacity: Int>: ~Copyable {
-        /// Maximum element stride supported by inline storage (64 bytes per slot).
+        /// Inline storage using shared `Storage.Inline` type.
         @usableFromInline
-        static var _maxStride: Int { 64 }
-
-        /// Raw byte storage. Each slot is 64 bytes (8 Ints on 64-bit).
-        @usableFromInline
-        var _storage: InlineArray<capacity, (Int, Int, Int, Int, Int, Int, Int, Int)>
+        var _storage: Stack<Element>.Storage.Inline<capacity>
 
         @usableFromInline
         var _count: Int
@@ -191,81 +187,12 @@ public struct Stack<Element: ~Copyable>: ~Copyable {
         /// Creates an empty inline stack.
         @inlinable
         public init() {
-            precondition(
-                MemoryLayout<Element>.stride <= Self._maxStride,
-                "Element stride (\(MemoryLayout<Element>.stride)) exceeds inline storage slot size (\(Self._maxStride) bytes). Use Stack.Bounded instead."
-            )
-            precondition(
-                MemoryLayout<Element>.alignment <= MemoryLayout<Int>.alignment,
-                "Element alignment (\(MemoryLayout<Element>.alignment)) exceeds inline storage alignment (\(MemoryLayout<Int>.alignment)). Use Stack.Bounded instead."
-            )
-            self._storage = InlineArray(repeating: (0, 0, 0, 0, 0, 0, 0, 0))
+            self._storage = .init()  // Preconditions handled by Storage.Inline
             self._count = 0
         }
 
         deinit {
-            let count = _count
-            guard count > 0 else { return }
-
-            // Workaround: Copy storage state to local vars before cleanup.
-            // The _storage access through withUnsafeBytes may be optimized incorrectly
-            // for ~Copyable structs without reference type properties.
-            let stride = MemoryLayout<Element>.stride
-
-            unsafe Swift.withUnsafePointer(to: _storage) { storagePtr in
-                let basePtr = UnsafeMutableRawPointer(mutating: UnsafeRawPointer(storagePtr))
-                for i in 0..<count {
-                    let elementPtr = unsafe (basePtr + i * stride)
-                        .assumingMemoryBound(to: Element.self)
-                    unsafe elementPtr.deinitialize(count: 1)
-                }
-            }
-        }
-
-        /// Returns a mutable pointer to the element at the given index.
-        @usableFromInline
-        @unsafe
-        mutating func _pointerToElement(at index: Int) -> UnsafeMutablePointer<Element> {
-            let stride = MemoryLayout<Element>.stride
-            return unsafe Swift.withUnsafeMutablePointer(to: &_storage) { storagePtr in
-                let basePtr = UnsafeMutableRawPointer(storagePtr)
-                let elementPtr = unsafe (basePtr + index * stride)
-                    .assumingMemoryBound(to: Element.self)
-                return unsafe elementPtr
-            }
-        }
-
-        /// Returns a read-only pointer to the element at the given index.
-        @usableFromInline
-        @unsafe
-        func _readPointerToElement(at index: Int) -> UnsafePointer<Element> {
-            let stride = MemoryLayout<Element>.stride
-            return unsafe Swift.withUnsafePointer(to: _storage) { storagePtr in
-                let basePtr = unsafe UnsafeRawPointer(storagePtr)
-                let elementPtr = unsafe (basePtr + index * stride)
-                    .assumingMemoryBound(to: Element.self)
-                return unsafe elementPtr
-            }
-        }
-
-        /// Returns the base pointer for element storage.
-        @usableFromInline
-        @unsafe
-        func _basePointer() -> UnsafePointer<Element> {
-            unsafe Swift.withUnsafePointer(to: _storage) { storagePtr in
-                let basePtr = unsafe UnsafeRawPointer(storagePtr)
-                return unsafe basePtr.assumingMemoryBound(to: Element.self)
-            }
-        }
-
-        /// Returns the mutable base pointer for element storage.
-        @usableFromInline
-        @unsafe
-        mutating func _mutableBasePointer() -> UnsafeMutablePointer<Element> {
-            unsafe Swift.withUnsafeMutablePointer(to: &_storage) { storagePtr in
-                let basePtr = UnsafeMutableRawPointer(storagePtr)
-                return unsafe basePtr.assumingMemoryBound(to: Element.self)
-            }
+            _storage.deinitialize(count: _count)
         }
     }
 
@@ -311,13 +238,9 @@ public struct Stack<Element: ~Copyable>: ~Copyable {
     ///   in extensions do not properly inherit `~Copyable` constraints from the outer type.
     @safe
     public struct Small<let inlineCapacity: Int>: ~Copyable {
-        /// Maximum element stride supported by inline storage (64 bytes per slot).
+        /// Inline storage using shared `Storage.Inline` type.
         @usableFromInline
-        static var _maxStride: Int { 64 }
-
-        /// Raw byte storage for inline elements. Each slot is 64 bytes (8 Ints on 64-bit).
-        @usableFromInline
-        var _inline: InlineArray<inlineCapacity, (Int, Int, Int, Int, Int, Int, Int, Int)>
+        var _inline: Stack<Element>.Storage.Inline<inlineCapacity>
 
         /// Current element count (valid elements in either inline or heap storage).
         @usableFromInline
@@ -334,93 +257,26 @@ public struct Stack<Element: ~Copyable>: ~Copyable {
         /// Creates an empty small stack.
         @inlinable
         public init() {
-            precondition(
-                MemoryLayout<Element>.stride <= Self._maxStride,
-                "Element stride (\(MemoryLayout<Element>.stride)) exceeds inline storage slot size (\(Self._maxStride) bytes). Use Stack.Bounded instead."
-            )
-            precondition(
-                MemoryLayout<Element>.alignment <= MemoryLayout<Int>.alignment,
-                "Element alignment (\(MemoryLayout<Element>.alignment)) exceeds inline storage alignment (\(MemoryLayout<Int>.alignment)). Use Stack.Bounded instead."
-            )
-            self._inline = InlineArray(repeating: (0, 0, 0, 0, 0, 0, 0, 0))
+            self._inline = .init()  // Preconditions handled by Storage.Inline
             self._count = 0
             self._heap = nil
-            self._heapPtr = nil
+            unsafe self._heapPtr = nil
         }
 
         deinit {
-            let count = _count
-            guard count > 0 else { return }
-
             if let heap = _heap {
                 // Elements are on heap - Storage handles cleanup via its deinit
                 // But we need to set count for deinit
-                heap.header = count
+                heap.header = _count
             } else {
-                // Elements are inline - clean up manually
-                let stride = MemoryLayout<Element>.stride
-                unsafe Swift.withUnsafeBytes(of: _inline) { bytes in
-                    let basePtr = unsafe UnsafeMutableRawPointer(mutating: bytes.baseAddress!)
-                    for i in 0..<count {
-                        let elementPtr = unsafe (basePtr + i * stride)
-                            .assumingMemoryBound(to: Element.self)
-                        unsafe elementPtr.deinitialize(count: 1)
-                    }
-                }
+                // Elements are inline - delegate to Storage.Inline
+                _inline.deinitialize(count: _count)
             }
         }
 
         /// Whether the stack is currently using heap storage.
         @inlinable
         public var isSpilled: Bool { _heap != nil }
-
-        // MARK: - Internal Helpers
-
-        /// Returns a mutable pointer to the inline element at the given index.
-        @usableFromInline
-        @unsafe
-        mutating func _inlinePointerToElement(at index: Int) -> UnsafeMutablePointer<Element> {
-            let stride = MemoryLayout<Element>.stride
-            return unsafe Swift.withUnsafeMutablePointer(to: &_inline) { storagePtr in
-                let basePtr = UnsafeMutableRawPointer(storagePtr)
-                let elementPtr = unsafe (basePtr + index * stride)
-                    .assumingMemoryBound(to: Element.self)
-                return unsafe elementPtr
-            }
-        }
-
-        /// Returns a read-only pointer to the inline element at the given index.
-        @usableFromInline
-        @unsafe
-        func _inlineReadPointerToElement(at index: Int) -> UnsafePointer<Element> {
-            let stride = MemoryLayout<Element>.stride
-            return unsafe Swift.withUnsafePointer(to: _inline) { storagePtr in
-                let basePtr = unsafe UnsafeRawPointer(storagePtr)
-                let elementPtr = unsafe (basePtr + index * stride)
-                    .assumingMemoryBound(to: Element.self)
-                return unsafe elementPtr
-            }
-        }
-
-        /// Returns the inline base pointer for element storage.
-        @usableFromInline
-        @unsafe
-        func _inlineBasePointer() -> UnsafePointer<Element> {
-            unsafe Swift.withUnsafePointer(to: _inline) { storagePtr in
-                let basePtr = unsafe UnsafeRawPointer(storagePtr)
-                return unsafe basePtr.assumingMemoryBound(to: Element.self)
-            }
-        }
-
-        /// Returns the mutable inline base pointer for element storage.
-        @usableFromInline
-        @unsafe
-        mutating func _inlineMutableBasePointer() -> UnsafeMutablePointer<Element> {
-            unsafe Swift.withUnsafeMutablePointer(to: &_inline) { storagePtr in
-                let basePtr = UnsafeMutableRawPointer(storagePtr)
-                return unsafe basePtr.assumingMemoryBound(to: Element.self)
-            }
-        }
 
         /// Spills inline storage to heap.
         @usableFromInline
@@ -430,20 +286,10 @@ public struct Stack<Element: ~Copyable>: ~Copyable {
             // Create heap storage with growth factor
             let newCapacity = Swift.max(minimumCapacity, inlineCapacity * 2, 8)
             let newStorage = Storage.create(minimumCapacity: newCapacity)
-            newStorage.header = _count
 
-            // Move elements from inline to heap
-            let stride = MemoryLayout<Element>.stride
-            _ = unsafe Swift.withUnsafeBytes(of: _inline) { bytes in
-                unsafe newStorage.withUnsafeMutablePointerToElements { heapPtr in
-                    let inlineBase = UnsafeMutableRawPointer(mutating: bytes.baseAddress!)
-                    for i in 0..<_count {
-                        let inlineElement = unsafe (inlineBase + i * stride)
-                            .assumingMemoryBound(to: Element.self)
-                        unsafe (heapPtr + i).initialize(to: inlineElement.move())
-                    }
-                }
-            }
+            // Move elements from inline to heap using Storage.Inline
+            _inline.move(to: newStorage, count: _count)
+            newStorage.header = _count
 
             _heap = newStorage
             unsafe (_heapPtr = newStorage._elementsPointer)

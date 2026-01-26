@@ -51,7 +51,7 @@ extension Stack.Small where Element: ~Copyable {
             _pushToHeap(element)
         } else if _count < inlineCapacity {
             // Still inline and have space
-            unsafe _inlinePointerToElement(at: _count).initialize(to: element)
+            _inline.initialize(to: element, at: _count)
             _count += 1
         } else {
             // Need to spill
@@ -63,7 +63,9 @@ extension Stack.Small where Element: ~Copyable {
     /// Internal: push element to heap storage.
     @usableFromInline
     mutating func _pushToHeap(_ element: consuming Element) {
-        guard let heap = _heap, let heapPtr = _heapPtr else {
+        guard
+            let heap = _heap,
+            let _ = unsafe _heapPtr else {
             preconditionFailure("_pushToHeap called without heap storage")
         }
 
@@ -107,11 +109,11 @@ extension Stack.Small where Element: ~Copyable {
 
         _count -= 1
 
-        if let heap = _heap, let heapPtr = _heapPtr {
+        if let heap = _heap, let heapPtr = unsafe _heapPtr {
             heap.header = _count
             return unsafe (heapPtr + _count).move()
         } else {
-            return unsafe _inlinePointerToElement(at: _count).move()
+            return _inline.move(at: _count)
         }
     }
 
@@ -128,15 +130,7 @@ extension Stack.Small where Element: ~Copyable {
             heap._deinitializeElements(in: 0..<_count)
             heap.header = 0
         } else {
-            let stride = MemoryLayout<Element>.stride
-            unsafe Swift.withUnsafeMutablePointer(to: &_inline) { storagePtr in
-                let basePtr = UnsafeMutableRawPointer(storagePtr)
-                for i in 0..<_count {
-                    let elementPtr = unsafe (basePtr + i * stride)
-                        .assumingMemoryBound(to: Element.self)
-                    unsafe elementPtr.deinitialize(count: 1)
-                }
-            }
+            _inline.deinitialize(count: _count)
         }
         _count = 0
     }
@@ -161,10 +155,10 @@ extension Stack.Small where Element: ~Copyable {
             return nil
         }
 
-        if let heapPtr = _heapPtr {
+        if let heapPtr = unsafe _heapPtr {
             return try unsafe body((heapPtr + _count - 1).pointee)
         } else {
-            return try unsafe body(_inlineReadPointerToElement(at: _count - 1).pointee)
+            return try unsafe body(_inline.read(at: _count - 1).pointee)
         }
     }
 }
@@ -183,10 +177,10 @@ extension Stack.Small where Element: Copyable {
             return nil
         }
 
-        if let heapPtr = _heapPtr {
+        if let heapPtr = unsafe _heapPtr {
             return unsafe (heapPtr + _count - 1).pointee
         } else {
-            return unsafe _inlineReadPointerToElement(at: _count - 1).pointee
+            return unsafe _inline.read(at: _count - 1).pointee
         }
     }
 }
@@ -200,10 +194,10 @@ extension Stack.Small where Element: ~Copyable {
     @inlinable
     public var span: Span<Element> {
         _read {
-            if let heapPtr = _heapPtr {
+            if let heapPtr = unsafe _heapPtr {
                 yield unsafe Span(_unsafeStart: heapPtr, count: _count)
             } else {
-                yield unsafe Span(_unsafeStart: _inlineBasePointer(), count: _count)
+                yield unsafe Span(_unsafeStart: _inline.basePointer(), count: _count)
             }
         }
     }
@@ -214,19 +208,19 @@ extension Stack.Small where Element: ~Copyable {
     @inlinable
     public var mutableSpan: MutableSpan<Element> {
         _read {
-            if let heapPtr = _heapPtr {
+            if let heapPtr = unsafe _heapPtr {
                 yield unsafe MutableSpan(_unsafeStart: heapPtr, count: _count)
             } else {
-                let ptr = unsafe UnsafeMutablePointer(mutating: _inlineBasePointer())
+                let ptr = unsafe UnsafeMutablePointer(mutating: _inline.basePointer())
                 yield unsafe MutableSpan(_unsafeStart: ptr, count: _count)
             }
         }
         _modify {
-            if var heapPtr = _heapPtr {
+            if let heapPtr = unsafe _heapPtr {
                 var s = unsafe MutableSpan(_unsafeStart: heapPtr, count: _count)
                 yield &s
             } else {
-                var s = unsafe MutableSpan(_unsafeStart: _inlineMutableBasePointer(), count: _count)
+                var s = unsafe MutableSpan(_unsafeStart: _inline.mutableBasePointer(), count: _count)
                 yield &s
             }
         }
@@ -251,13 +245,13 @@ extension Stack.Small where Element: ~Copyable {
     public func forEach<E: Swift.Error>(
         _ body: (borrowing Element) throws(E) -> Void
     ) throws(E) {
-        if let heapPtr = _heapPtr {
+        if let heapPtr = unsafe _heapPtr {
             for i in 0..<_count {
                 try unsafe body((heapPtr + i).pointee)
             }
         } else {
             for i in 0..<_count {
-                try unsafe body(_inlineReadPointerToElement(at: i).pointee)
+                try unsafe body(_inline.read(at: i).pointee)
             }
         }
     }
@@ -282,14 +276,8 @@ extension Stack.Small where Element: ~Copyable {
             heap._deinitializeElements(in: targetCount..<_count)
             heap.header = targetCount
         } else {
-            let stride = MemoryLayout<Element>.stride
-            unsafe Swift.withUnsafeMutablePointer(to: &_inline) { storagePtr in
-                let basePtr = UnsafeMutableRawPointer(storagePtr)
-                for i in targetCount..<_count {
-                    let elementPtr = unsafe (basePtr + i * stride)
-                        .assumingMemoryBound(to: Element.self)
-                    unsafe elementPtr.deinitialize(count: 1)
-                }
+            for i in targetCount..<_count {
+                unsafe _inline.pointer(at: i).deinitialize(count: 1)
             }
         }
         _count = targetCount
