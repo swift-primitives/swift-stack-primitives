@@ -180,8 +180,8 @@ extension Stack: Swift.Sequence where Element: Copyable {
         /// Advances to the next element and returns it, or nil if no next element exists.
         @inlinable
         public mutating func next() -> Element? {
-            guard _index.position.rawValue < _storage.header else { return nil }
-            let currentIndex = _index.position.rawValue
+            guard _index.position < _storage.header else { return nil }
+            let currentIndex = _index.position
             _index = (_index + 1)!
             return _storage._readElement(at: currentIndex)
         }

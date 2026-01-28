@@ -174,9 +174,9 @@ extension Stack where Element: ~Copyable {
         at index: Index,
         _ body: (UnsafePointer<Element>) -> R
     ) -> R {
-        precondition(index >= .zero && index.position.rawValue < _storage.header)
+        precondition(index >= .zero && index.position < _storage.header)
         return unsafe _storage.withUnsafeMutablePointerToElements { elements in
-            unsafe body(elements + index.position.rawValue)
+            unsafe body(elements + index.position)
         }
     }
 
@@ -191,9 +191,9 @@ extension Stack where Element: ~Copyable {
         at index: Index,
         _ body: (UnsafeMutablePointer<Element>) -> R
     ) -> R {
-        precondition(index >= .zero && index.position.rawValue < _storage.header)
+        precondition(index >= .zero && index.position < _storage.header)
         return unsafe _storage.withUnsafeMutablePointerToElements { elements in
-            unsafe body(elements + index.position.rawValue)
+            unsafe body(elements + index.position)
         }
     }
 }

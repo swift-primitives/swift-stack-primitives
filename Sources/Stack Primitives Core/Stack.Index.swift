@@ -42,12 +42,12 @@ extension Stack where Element: ~Copyable {
     @inlinable
     public subscript(index: Index) -> Element {
         _read {
-            precondition(index >= 0 && index.position.rawValue < _storage.header, "Index out of bounds")
-            yield unsafe _cachedPtr[index.position.rawValue]
+            precondition(index >= 0 && index.position < _storage.header, "Index out of bounds")
+            yield unsafe _cachedPtr[index.position]
         }
         _modify {
-            precondition(index >= 0 && index.position.rawValue < _storage.header, "Index out of bounds")
-            yield unsafe &_cachedPtr[index.position.rawValue]
+            precondition(index >= 0 && index.position < _storage.header, "Index out of bounds")
+            yield unsafe &_cachedPtr[index.position]
         }
     }
 }
@@ -60,13 +60,13 @@ extension Stack where Element: Copyable {
     @inlinable
     public subscript(index: Index) -> Element {
         _read {
-            precondition(index >= .zero && index.position.rawValue < _storage.header, "Index out of bounds")
-            yield unsafe _cachedPtr[index.position.rawValue]
+            precondition(index >= .zero && index.position < _storage.header, "Index out of bounds")
+            yield unsafe _cachedPtr[index.position]
         }
         _modify {
             makeUnique()
-            precondition(index >= .zero && index.position.rawValue < _storage.header, "Index out of bounds")
-            yield unsafe &_cachedPtr[index.position.rawValue]
+            precondition(index >= .zero && index.position < _storage.header, "Index out of bounds")
+            yield unsafe &_cachedPtr[index.position]
         }
     }
 }
@@ -81,12 +81,12 @@ extension Stack.Bounded where Element: ~Copyable {
     @inlinable
     public subscript(index: Stack<Element>.Index) -> Element {
         _read {
-            precondition(index >= .zero && index.position.rawValue < _storage.header, "Index out of bounds")
-            yield unsafe _cachedPtr[index.position.rawValue]
+            precondition(index >= .zero && index.position < _storage.header, "Index out of bounds")
+            yield unsafe _cachedPtr[index.position]
         }
         _modify {
-            precondition(index >= .zero && index.position.rawValue < _storage.header, "Index out of bounds")
-            yield unsafe &_cachedPtr[index.position.rawValue]
+            precondition(index >= .zero && index.position < _storage.header, "Index out of bounds")
+            yield unsafe &_cachedPtr[index.position]
         }
     }
 }
@@ -99,13 +99,13 @@ extension Stack.Bounded where Element: Copyable {
     @inlinable
     public subscript(index: Stack<Element>.Index) -> Element {
         _read {
-            precondition(index >= .zero && index.position.rawValue < _storage.header, "Index out of bounds")
-            yield unsafe _cachedPtr[index.position.rawValue]
+            precondition(index >= .zero && index.position < _storage.header, "Index out of bounds")
+            yield unsafe _cachedPtr[index.position]
         }
         _modify {
             makeUnique()
-            precondition(index >= .zero && index.position.rawValue < _storage.header, "Index out of bounds")
-            yield unsafe &_cachedPtr[index.position.rawValue]
+            precondition(index >= .zero && index.position < _storage.header, "Index out of bounds")
+            yield unsafe &_cachedPtr[index.position]
         }
     }
 }
@@ -120,12 +120,12 @@ extension Stack.Inline where Element: ~Copyable {
     @inlinable
     public subscript(index: Stack<Element>.Index) -> Element {
         _read {
-            precondition(index >= .zero && index.position.rawValue < _count, "Index out of bounds")
-            yield unsafe _storage.read(at: index.position.rawValue).pointee
+            precondition(index >= .zero && index.position < _count, "Index out of bounds")
+            yield unsafe _storage.read(at: index.position).pointee
         }
         _modify {
-            precondition(index >= .zero && index.position.rawValue < _count, "Index out of bounds")
-            yield unsafe &_storage.pointer(at: index.position.rawValue).pointee
+            precondition(index >= .zero && index.position < _count, "Index out of bounds")
+            yield unsafe &_storage.pointer(at: index.position).pointee
         }
     }
 }
@@ -139,8 +139,8 @@ extension Stack where Element: Copyable {
     /// - Returns: The element at the index, or `nil` if out of bounds.
     @inlinable
     public func element(at index: Index) -> Element? {
-        guard index >= .zero && index.position.rawValue < _storage.header else { return nil }
-        return _storage._readElement(at: index.position.rawValue)
+        guard index >= .zero && index.position < _storage.header else { return nil }
+        return _storage._readElement(at: index.position)
     }
 }
 
@@ -151,7 +151,7 @@ extension Stack.Bounded where Element: Copyable {
     /// - Returns: The element at the index, or `nil` if out of bounds.
     @inlinable
     public func element(at index: Stack<Element>.Index) -> Element? {
-        guard index >= .zero && index.position.rawValue < _storage.header else { return nil }
-        return _storage._readElement(at: index.position.rawValue)
+        guard index >= .zero && index.position < _storage.header else { return nil }
+        return _storage._readElement(at: index.position)
     }
 }

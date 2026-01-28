@@ -191,8 +191,8 @@ extension Stack.Bounded where Element: ~Copyable {
         at index: Stack<Element>.Index,
         _ body: (UnsafePointer<Element>) -> R
     ) -> R {
-        precondition(index >= .zero && index.position.rawValue < _storage.header)
-        return unsafe body(_cachedPtr + index.position.rawValue)
+        precondition(index >= .zero && index.position < _storage.header)
+        return unsafe body(_cachedPtr + index.position)
     }
 
     /// Provides mutable pointer access to the element at the specified index.
@@ -203,8 +203,8 @@ extension Stack.Bounded where Element: ~Copyable {
         at index: Stack<Element>.Index,
         _ body: (UnsafeMutablePointer<Element>) -> R
     ) -> R {
-        precondition(index >= .zero && index.position.rawValue < _storage.header)
-        return unsafe body(_cachedPtr + index.position.rawValue)
+        precondition(index >= .zero && index.position < _storage.header)
+        return unsafe body(_cachedPtr + index.position)
     }
 }
 
