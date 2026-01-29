@@ -14,11 +14,11 @@
 extension Stack where Element: ~Copyable {
     /// The current number of elements in the stack.
     @inlinable
-    public var count: Int { _storage.header }
+    public var count: Int { Int(_storage.count.count) }
 
     /// Whether the stack is empty.
     @inlinable
-    public var isEmpty: Bool { _storage.header == 0 }
+    public var isEmpty: Bool { _storage.count == .zero }
 
     /// The current capacity of the stack.
     @inlinable
@@ -35,13 +35,13 @@ extension Stack where Element: ~Copyable {
 
         // Growth factor 2.0, minimum capacity 4
         let newCapacity = Swift.max(minimumCapacity, _storage.capacity * 2, 4)
-        let newStorage = Stack<Element>.Storage.create(minimumCapacity: newCapacity)
-        let currentCount = _storage.header
+        let newStorage = Storage<Element>.create(minimumCapacity: Index<Element>.Count(UInt(newCapacity)))
+        let currentCount = _storage.count
 
-        _storage._moveAllElements(to: newStorage, count: currentCount)
-        newStorage.header = currentCount
+        _storage.move(to: newStorage, count: currentCount)
+        newStorage.count = currentCount
         _storage = newStorage
-        unsafe (_cachedPtr = _storage._elementsPointer)  // CRITICAL: Update cached pointer
+        unsafe (_cachedPtr = _storage.pointer(at: .zero).base)  // CRITICAL: Update cached pointer
     }
 
     /// Reserves capacity for at least the specified number of elements.
@@ -65,10 +65,11 @@ extension Stack where Element: ~Copyable {
     /// - Complexity: O(1) amortized
     @inlinable
     public mutating func push(_ element: consuming Element) {
-        ensureCapacity(_storage.header + 1)
-        let index = _storage.header
-        _storage._initializeElement(at: index, to: element)
-        _storage.header += 1
+        let currentCount = Int(_storage.count.count)
+        ensureCapacity(currentCount + 1)
+        let index = Index<Element>(_storage.count)
+        _storage.initialize(to: element, at: index)
+        _storage.count = _storage.count + .one
     }
 
     /// Pops and returns the top element, or nil if empty.
@@ -77,11 +78,11 @@ extension Stack where Element: ~Copyable {
     /// - Complexity: O(1)
     @inlinable
     public mutating func pop() -> Element? {
-        guard _storage.header > 0 else {
+        guard _storage.count > .zero else {
             return nil
         }
-        _storage.header -= 1
-        return _storage._moveElement(at: _storage.header)
+        _storage.count = try! _storage.count - .one  // Safe: count > 0
+        return _storage.move(at: Index<Element>(_storage.count))
     }
 
     /// Removes all elements from the stack.
@@ -91,15 +92,15 @@ extension Stack where Element: ~Copyable {
     /// - Complexity: O(n) where n is the number of elements.
     @inlinable
     public mutating func clear(keepingCapacity: Bool = true) {
-        let count = _storage.header
-        if count > 0 {
-            _storage._deinitializeElements(in: 0..<count)
+        let count = _storage.count
+        if count > .zero {
+            _storage.deinitialize(count: count)
         }
-        _storage.header = 0
+        _storage.count = .zero
 
         if !keepingCapacity {
-            _storage = Storage.create()
-            unsafe (_cachedPtr = _storage._elementsPointer)  // Update cached pointer
+            _storage = Storage<Element>.create(minimumCapacity: .zero)
+            unsafe (_cachedPtr = _storage.pointer(at: .zero).base)  // Update cached pointer
         }
     }
 }
@@ -116,12 +117,11 @@ extension Stack where Element: ~Copyable {
     /// - Complexity: O(1)
     @inlinable
     public func peek<R>(_ body: (borrowing Element) -> R) -> R? {
-        guard _storage.header > 0 else {
+        guard _storage.count > .zero else {
             return nil
         }
-        return unsafe _storage.withUnsafeMutablePointerToElements { elements in
-            body(unsafe (elements + _storage.header - 1).pointee)
-        }
+        let topIndex = try! Index<Element>(_storage.count) - .one  // Safe: count > 0
+        return body(unsafe _storage.read(at: topIndex).pointee)
     }
 }
 
@@ -141,7 +141,7 @@ extension Stack where Element: ~Copyable {
         @_lifetime(borrow self)
         @inlinable
         borrowing get {
-            unsafe Span(_unsafeStart: _cachedPtr, count: _storage.header)
+            unsafe Span(_unsafeStart: _cachedPtr, count: Int(_storage.count.count))
         }
     }
 
@@ -155,7 +155,7 @@ extension Stack where Element: ~Copyable {
         @_lifetime(&self)
         @inlinable
         mutating get {
-            unsafe MutableSpan(_unsafeStart: _cachedPtr, count: _storage.header)
+            unsafe MutableSpan(_unsafeStart: _cachedPtr, count: Int(_storage.count.count))
         }
     }
 }
@@ -174,7 +174,7 @@ extension Stack where Element: ~Copyable {
         at index: Index,
         _ body: (UnsafePointer<Element>) -> R
     ) -> R {
-        precondition(index >= .zero && index.position < _storage.header)
+        precondition(index >= .zero && index < Index<Element>(_storage.count))
         return unsafe _storage.withUnsafeMutablePointerToElements { elements in
             unsafe body(elements + index.position)
         }
@@ -191,7 +191,7 @@ extension Stack where Element: ~Copyable {
         at index: Index,
         _ body: (UnsafeMutablePointer<Element>) -> R
     ) -> R {
-        precondition(index >= .zero && index.position < _storage.header)
+        precondition(index >= .zero && index < Index<Element>(_storage.count))
         return unsafe _storage.withUnsafeMutablePointerToElements { elements in
             unsafe body(elements + index.position)
         }
@@ -209,10 +209,10 @@ extension Stack where Element: ~Copyable {
     /// - Complexity: O(n) where n is the number of elements.
     @inlinable
     public func forEach(_ body: (borrowing Element) -> Void) {
-        let count = _storage.header
+        let count = _storage.count
         _ = unsafe _storage.withUnsafeMutablePointerToElements { elements in
-            for i in 0..<count {
-                body(unsafe (elements + i).pointee)
+            (.zero..<count).forEach { index in
+                body(unsafe (elements + index).pointee)
             }
         }
     }
@@ -228,20 +228,20 @@ extension Stack where Element: ~Copyable {
     /// - Complexity: O(n) where n is the number of elements.
     @inlinable
     public mutating func compact() {
-        let currentCount = _storage.header
-        guard _storage.capacity > currentCount else { return }
+        let currentCount = _storage.count
+        guard _storage.capacity > Int(currentCount.count) else { return }
 
-        if currentCount == 0 {
-            _storage = Storage.create()
-            unsafe (_cachedPtr = _storage._elementsPointer)  // Update cached pointer
+        if currentCount == .zero {
+            _storage = Storage<Element>.create(minimumCapacity: .zero)
+            unsafe (_cachedPtr = _storage.pointer(at: .zero).base)  // Update cached pointer
             return
         }
 
-        let newStorage = Stack<Element>.Storage.create(minimumCapacity: currentCount)
-        _storage._moveAllElements(to: newStorage, count: currentCount)
-        newStorage.header = currentCount
+        let newStorage = Storage<Element>.create(minimumCapacity: currentCount)
+        _storage.move(to: newStorage, count: currentCount)
+        newStorage.count = currentCount
         _storage = newStorage
-        unsafe (_cachedPtr = _storage._elementsPointer)  // Update cached pointer
+        unsafe (_cachedPtr = _storage.pointer(at: .zero).base)  // Update cached pointer
     }
 
     /// Removes elements beyond the specified count.
@@ -253,11 +253,15 @@ extension Stack where Element: ~Copyable {
     /// - Complexity: O(k) where k is the number of removed elements.
     @inlinable
     public mutating func truncate(to newCount: Int) {
-        let currentCount = _storage.header
+        let currentCount = Int(_storage.count.count)
         guard newCount < currentCount else { return }
         let targetCount = Swift.max(0, newCount)
 
-        _storage._deinitializeElements(in: targetCount..<currentCount)
-        _storage.header = targetCount
+        let range = Range.Lazy<Index<Element>>(
+            lowerBound: Index<Element>(UInt(targetCount)),
+            upperBound: Index<Element>(_storage.count)
+        )
+        _storage.deinitialize(in: range)
+        _storage.count = Index<Element>.Count(UInt(targetCount))
     }
 }

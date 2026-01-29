@@ -16,15 +16,15 @@
 extension Stack.Bounded where Element: ~Copyable {
     /// The current number of elements in the stack.
     @inlinable
-    public var count: Int { _storage.header }
+    public var count: Int { Int(_storage.count.count) }
 
     /// Whether the stack is empty.
     @inlinable
-    public var isEmpty: Bool { _storage.header == 0 }
+    public var isEmpty: Bool { _storage.count == .zero }
 
     /// Whether the stack is full.
     @inlinable
-    public var isFull: Bool { _storage.header == capacity }
+    public var isFull: Bool { Int(_storage.count.count) == capacity }
 }
 
 // MARK: - Core Operations (Base - for ~Copyable elements)
@@ -37,12 +37,12 @@ extension Stack.Bounded where Element: ~Copyable {
     /// - Complexity: O(1)
     @inlinable
     public mutating func push(_ element: consuming Element) throws(__StackBoundedError) {
-        guard _storage.header < capacity else {
+        guard Int(_storage.count.count) < capacity else {
             throw .overflow
         }
-        let index = _storage.header
-        _storage._initializeElement(at: index, to: element)
-        _storage.header += 1
+        let index = Index<Element>(_storage.count)
+        _storage.initialize(to: element, at: index)
+        _storage.count = _storage.count + .one
     }
 
     /// Pops and returns the top element, or nil if empty.
@@ -51,11 +51,11 @@ extension Stack.Bounded where Element: ~Copyable {
     /// - Complexity: O(1)
     @inlinable
     public mutating func pop() -> Element? {
-        guard _storage.header > 0 else {
+        guard _storage.count > .zero else {
             return nil
         }
-        _storage.header -= 1
-        return _storage._moveElement(at: _storage.header)
+        _storage.count = try! _storage.count - .one  // Safe: count > 0
+        return _storage.move(at: Index<Element>(_storage.count))
     }
 
     /// Removes all elements from the stack.
@@ -65,11 +65,11 @@ extension Stack.Bounded where Element: ~Copyable {
     /// - Complexity: O(n) where n is the number of elements.
     @inlinable
     public mutating func clear() {
-        let count = _storage.header
-        if count > 0 {
-            _storage._deinitializeElements(in: 0..<count)
+        let count = _storage.count
+        if count > .zero {
+            _storage.deinitialize(count: count)
         }
-        _storage.header = 0
+        _storage.count = .zero
     }
 }
 
@@ -81,7 +81,7 @@ extension Stack.Bounded where Element: Copyable {
     mutating func makeUnique() {
         if !isKnownUniquelyReferenced(&_storage) {
             _storage = _storage.copy()
-            unsafe (_cachedPtr = _storage._elementsPointer)  // CRITICAL: Update cached pointer
+            unsafe (_cachedPtr = _storage.pointer(at: .zero).base)  // CRITICAL: Update cached pointer
         }
     }
 
@@ -89,34 +89,34 @@ extension Stack.Bounded where Element: Copyable {
     @inlinable
     public mutating func push(_ element: Element) throws(__StackBoundedError) {
         makeUnique()
-        guard _storage.header < capacity else {
+        guard Int(_storage.count.count) < capacity else {
             throw .overflow
         }
-        let index = _storage.header
-        _storage._initializeElement(at: index, to: element)
-        _storage.header += 1
+        let index = Index<Element>(_storage.count)
+        _storage.initialize(to: element, at: index)
+        _storage.count = _storage.count + .one
     }
 
     /// Pops and returns the top element, or nil if empty (CoW-aware).
     @inlinable
     public mutating func pop() -> Element? {
         makeUnique()
-        guard _storage.header > 0 else {
+        guard _storage.count > .zero else {
             return nil
         }
-        _storage.header -= 1
-        return _storage._moveElement(at: _storage.header)
+        _storage.count = try! _storage.count - .one  // Safe: count > 0
+        return _storage.move(at: Index<Element>(_storage.count))
     }
 
     /// Removes all elements from the stack (CoW-aware).
     @inlinable
     public mutating func clear() {
         makeUnique()
-        let count = _storage.header
-        if count > 0 {
-            _storage._deinitializeElements(in: 0..<count)
+        let count = _storage.count
+        if count > .zero {
+            _storage.deinitialize(count: count)
         }
-        _storage.header = 0
+        _storage.count = .zero
     }
 }
 
@@ -126,10 +126,11 @@ extension Stack.Bounded where Element: ~Copyable {
     /// Peeks at the top element without removing it.
     @inlinable
     public func peek<R>(_ body: (borrowing Element) -> R) -> R? {
-        guard _storage.header > 0 else {
+        guard _storage.count > .zero else {
             return nil
         }
-        return unsafe body((_cachedPtr + _storage.header - 1).pointee)
+        let topIndex = try! Index<Element>(_storage.count) - .one  // Safe: count > 0
+        return body(unsafe _storage.read(at: topIndex).pointee)
     }
 }
 
@@ -137,10 +138,11 @@ extension Stack.Bounded where Element: Copyable {
     /// Returns the top element without removing it, or nil if empty.
     @inlinable
     public func peek() -> Element? {
-        guard _storage.header > 0 else {
+        guard _storage.count > .zero else {
             return nil
         }
-        return _storage._readElement(at: _storage.header - 1)
+        let topIndex = try! Index<Element>(_storage.count) - .one  // Safe: count > 0
+        return unsafe _storage.read(at: topIndex).pointee
     }
 }
 
@@ -152,7 +154,7 @@ extension Stack.Bounded where Element: ~Copyable {
         @_lifetime(borrow self)
         @inlinable
         borrowing get {
-            unsafe Span(_unsafeStart: _cachedPtr, count: _storage.header)
+            unsafe Span(_unsafeStart: _cachedPtr, count: Int(_storage.count.count))
         }
     }
 
@@ -161,7 +163,7 @@ extension Stack.Bounded where Element: ~Copyable {
         @_lifetime(&self)
         @inlinable
         mutating get {
-            unsafe MutableSpan(_unsafeStart: _cachedPtr, count: _storage.header)
+            unsafe MutableSpan(_unsafeStart: _cachedPtr, count: Int(_storage.count.count))
         }
     }
 }
@@ -175,7 +177,7 @@ extension Stack.Bounded where Element: Copyable {
         @inlinable
         mutating get {
             makeUnique()
-            return unsafe MutableSpan(_unsafeStart: _cachedPtr, count: _storage.header)
+            return unsafe MutableSpan(_unsafeStart: _cachedPtr, count: Int(_storage.count.count))
         }
     }
 }
@@ -191,7 +193,7 @@ extension Stack.Bounded where Element: ~Copyable {
         at index: Stack<Element>.Index,
         _ body: (UnsafePointer<Element>) -> R
     ) -> R {
-        precondition(index >= .zero && index.position < _storage.header)
+        precondition(index >= .zero && index < Index<Element>(_storage.count))
         return unsafe body(_cachedPtr + index.position)
     }
 
@@ -203,7 +205,7 @@ extension Stack.Bounded where Element: ~Copyable {
         at index: Stack<Element>.Index,
         _ body: (UnsafeMutablePointer<Element>) -> R
     ) -> R {
-        precondition(index >= .zero && index.position < _storage.header)
+        precondition(index >= .zero && index < Index<Element>(_storage.count))
         return unsafe body(_cachedPtr + index.position)
     }
 }
@@ -218,9 +220,9 @@ extension Stack.Bounded where Element: ~Copyable {
     /// Calls the given closure for each element in the stack.
     @inlinable
     public func forEach(_ body: (borrowing Element) -> Void) {
-        let count = _storage.header
-        for i in 0..<count {
-            body(unsafe (_cachedPtr + i).pointee)
+        let count = _storage.count
+        (.zero..<count).forEach { index in
+            body(unsafe _storage.read(at: index).pointee)
         }
     }
 }
@@ -231,12 +233,16 @@ extension Stack.Bounded where Element: ~Copyable {
     /// Removes elements beyond the specified count.
     @inlinable
     public mutating func truncate(to newCount: Int) {
-        let currentCount = _storage.header
+        let currentCount = Int(_storage.count.count)
         guard newCount < currentCount else { return }
         let targetCount = Swift.max(0, newCount)
 
-        _storage._deinitializeElements(in: targetCount..<currentCount)
-        _storage.header = targetCount
+        let range = Range.Lazy<Index<Element>>(
+            lowerBound: Index<Element>(UInt(targetCount)),
+            upperBound: Index<Element>(_storage.count)
+        )
+        _storage.deinitialize(in: range)
+        _storage.count = Index<Element>.Count(UInt(targetCount))
     }
 }
 
@@ -247,12 +253,16 @@ extension Stack.Bounded where Element: Copyable {
     @inlinable
     public mutating func truncate(to newCount: Int) {
         makeUnique()
-        let currentCount = _storage.header
+        let currentCount = Int(_storage.count.count)
         guard newCount < currentCount else { return }
         let targetCount = Swift.max(0, newCount)
 
-        _storage._deinitializeElements(in: targetCount..<currentCount)
-        _storage.header = targetCount
+        let range = Range.Lazy<Index<Element>>(
+            lowerBound: Index<Element>(UInt(targetCount)),
+            upperBound: Index<Element>(_storage.count)
+        )
+        _storage.deinitialize(in: range)
+        _storage.count = Index<Element>.Count(UInt(targetCount))
     }
 }
 

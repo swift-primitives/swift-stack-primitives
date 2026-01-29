@@ -43,7 +43,7 @@ extension Stack.Inline where Element: ~Copyable {
         guard _count < Self.capacity else {
             throw .overflow
         }
-        _storage.initialize(to: element, at: _count)
+        _storage.initialize(to: element, at: Index<Element>(UInt(_count)))
         _count += 1
     }
 
@@ -57,7 +57,7 @@ extension Stack.Inline where Element: ~Copyable {
             return nil
         }
         _count -= 1
-        return _storage.move(at: _count)
+        return _storage.move(at: Index<Element>(UInt(_count)))
     }
 
     /// Removes all elements from the stack.
@@ -68,7 +68,7 @@ extension Stack.Inline where Element: ~Copyable {
     /// - Complexity: O(n) where n is the number of elements.
     @inlinable
     public mutating func clear() {
-        _storage.deinitialize(count: _count)
+        _storage.deinitialize(count: Index<Element>.Count(UInt(_count)))
         _count = 0
     }
 }
@@ -88,7 +88,8 @@ extension Stack.Inline where Element: ~Copyable {
         guard _count > 0 else {
             return nil
         }
-        return try unsafe body(_storage.read(at: _count - 1).pointee)
+        let topIndex = Index<Element>(UInt(_count - 1))
+        return try unsafe body(_storage.read(at: topIndex).pointee)
     }
 }
 
@@ -105,7 +106,8 @@ extension Stack.Inline where Element: Copyable {
         guard _count > 0 else {
             return nil
         }
-        return unsafe _storage.read(at: _count - 1).pointee
+        let topIndex = Index<Element>(UInt(_count - 1))
+        return unsafe _storage.read(at: topIndex).pointee
     }
 }
 
@@ -132,7 +134,8 @@ extension Stack.Inline where Element: ~Copyable {
     @inlinable
     public var span: Span<Element> {
         _read {
-            yield unsafe Span(_unsafeStart: _storage.basePointer(), count: _count)
+            let basePtr = unsafe UnsafePointer(_storage.pointer(at: .zero).base)
+            yield unsafe Span(_unsafeStart: basePtr, count: _count)
         }
     }
 
@@ -158,11 +161,11 @@ extension Stack.Inline where Element: ~Copyable {
         _read {
             // For _read, we provide read-only access through the span.
             // Using mutating cast is safe here because _read doesn't allow mutation.
-            let ptr = unsafe UnsafeMutablePointer(mutating: _storage.basePointer())
+            let ptr = unsafe UnsafeMutablePointer(mutating: _storage.pointer(at: .zero).base)
             yield unsafe MutableSpan(_unsafeStart: ptr, count: _count)
         }
         _modify {
-            var s = unsafe MutableSpan(_unsafeStart: _storage.mutableBasePointer(), count: _count)
+            var s = unsafe MutableSpan(_unsafeStart: _storage.pointer(at: .zero).base, count: _count)
             yield &s
         }
     }
@@ -193,7 +196,8 @@ extension Stack.Inline where Element: ~Copyable {
         _ body: (borrowing Element) throws(E) -> Void
     ) throws(E) {
         for i in 0..<_count {
-            try unsafe body(_storage.read(at: i).pointee)
+            let index = Index<Element>(UInt(i))
+            try unsafe body(_storage.read(at: index).pointee)
         }
     }
 }
@@ -214,7 +218,8 @@ extension Stack.Inline where Element: ~Copyable {
         let targetCount = Swift.max(0, newCount)
 
         for i in targetCount..<_count {
-            unsafe _storage.pointer(at: i).deinitialize(count: 1)
+            let index = Index<Element>(UInt(i))
+            unsafe _storage.pointer(at: index).deinitialize(count: 1)
         }
         _count = targetCount
     }

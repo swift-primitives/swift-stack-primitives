@@ -19,6 +19,7 @@ let package = Package(
     ],
     dependencies: [
         .package(path: "../swift-index-primitives"),
+        .package(path: "../swift-storage-primitives"),
         .package(path: "../swift-collection-primitives"),
         .package(path: "../swift-input-primitives"),
         .package(path: "../swift-sequence-primitives"),
@@ -29,6 +30,7 @@ let package = Package(
             name: "Stack Primitives Core",
             dependencies: [
                 .product(name: "Index Primitives", package: "swift-index-primitives"),
+                .product(name: "Storage Primitives", package: "swift-storage-primitives"),
                 .product(name: "Collection Primitives", package: "swift-collection-primitives"),
                 .product(name: "Input Primitives", package: "swift-input-primitives"),
             ]
