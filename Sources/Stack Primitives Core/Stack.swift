@@ -71,12 +71,12 @@
 public struct Stack<Element: ~Copyable>: ~Copyable {
 
     @usableFromInline
-    var _storage: Storage<Element>
+    package var _storage: Storage<Element>
 
     /// Cached pointer to element storage. Stored in struct to enable property-based Span access.
     /// CRITICAL: Must be updated whenever _storage is replaced (reallocation, CoW copy).
     @usableFromInline
-    var _cachedPtr: UnsafeMutablePointer<Element>
+    package var _cachedPtr: UnsafeMutablePointer<Element>
 
     // MARK: - Inline (declared here to fix Swift compiler bug with ~Copyable in extensions)
 
@@ -92,17 +92,17 @@ public struct Stack<Element: ~Copyable>: ~Copyable {
     public struct Inline<let capacity: Int>: ~Copyable {
         /// Inline storage from storage-primitives.
         @usableFromInline
-        var _storage: Storage<Element>.Inline<capacity>
+        package var _storage: Storage<Element>.Inline<capacity>
 
         @usableFromInline
-        var _count: Int
+        package var _count: Int
 
         /// Workaround for Swift compiler bug where deinit element cleanup
         /// fails for ~Copyable structs that contain only value-type properties.
         /// Adding a reference type property (`AnyObject?`) fixes the bug.
         /// See: https://github.com/swiftlang/swift/issues/86652
         @usableFromInline
-        var _deinitWorkaround: AnyObject? = nil
+        package var _deinitWorkaround: AnyObject? = nil
 
         /// Creates an empty inline stack.
         ///
@@ -115,7 +115,7 @@ public struct Stack<Element: ~Copyable>: ~Copyable {
         }
 
         deinit {
-            _storage.deinitialize(count: Index<Element>.Count(UInt(_count)))
+            _storage.deinitialize(count: Stack<Element>.Index.Count(UInt(_count)))
         }
     }
 
@@ -163,19 +163,19 @@ public struct Stack<Element: ~Copyable>: ~Copyable {
     public struct Small<let inlineCapacity: Int>: ~Copyable {
         /// Inline storage from storage-primitives.
         @usableFromInline
-        var _inline: Storage<Element>.Inline<inlineCapacity>
+        package var _inline: Storage<Element>.Inline<inlineCapacity>
 
         /// Current element count (valid elements in either inline or heap storage).
         @usableFromInline
-        var _count: Int
+        package var _count: Int
 
         /// Heap storage when spilled. Nil when using inline storage.
         @usableFromInline
-        var _heap: Storage<Element>?
+        package var _heap: Storage<Element>?
 
         /// Cached pointer to heap elements. Only valid when _heap is non-nil.
         @usableFromInline
-        var _heapPtr: UnsafeMutablePointer<Element>?
+        package var _heapPtr: UnsafeMutablePointer<Element>?
 
         /// Creates an empty small stack.
         ///
@@ -193,10 +193,10 @@ public struct Stack<Element: ~Copyable>: ~Copyable {
             if let heap = _heap {
                 // Elements are on heap - Storage handles cleanup via its deinit
                 // But we need to set count for deinit
-                heap.count = Index<Element>.Count(UInt(_count))
+                heap.count = Stack<Element>.Index.Count(UInt(_count))
             } else {
                 // Elements are inline - delegate to Storage.Inline
-                _inline.deinitialize(count: Index<Element>.Count(UInt(_count)))
+                _inline.deinitialize(count: Stack<Element>.Index.Count(UInt(_count)))
             }
         }
 
@@ -206,16 +206,16 @@ public struct Stack<Element: ~Copyable>: ~Copyable {
 
         /// Spills inline storage to heap.
         @usableFromInline
-        mutating func _spillToHeap(minimumCapacity: Int) {
+        package mutating func _spillToHeap(minimumCapacity: Int) {
             precondition(_heap == nil, "Already spilled")
 
             // Create heap storage with growth factor
             let newCapacity = Swift.max(minimumCapacity, inlineCapacity * 2, 8)
-            let newStorage = Storage<Element>.create(minimumCapacity: Index<Element>.Count(UInt(newCapacity)))
+            let newStorage = Storage<Element>.create(minimumCapacity: Stack<Element>.Index.Count(UInt(newCapacity)))
 
             // Move elements from inline to heap
-            _inline.move(to: newStorage, count: Index<Element>.Count(UInt(_count)))
-            newStorage.count = Index<Element>.Count(UInt(_count))
+            _inline.move(to: newStorage, count: Stack<Element>.Index.Count(UInt(_count)))
+            newStorage.count = Stack<Element>.Index.Count(UInt(_count))
 
             _heap = newStorage
             unsafe (_heapPtr = newStorage.pointer(at: .zero).base)
@@ -278,12 +278,12 @@ public struct Stack<Element: ~Copyable>: ~Copyable {
     @safe
     public struct Bounded: ~Copyable {
         @usableFromInline
-        var _storage: Storage<Element>
+        package var _storage: Storage<Element>
 
         /// Cached pointer to element storage. Stored in struct to enable property-based Span access.
         /// CRITICAL: Must be updated whenever _storage is replaced (CoW copy).
         @usableFromInline
-        var _cachedPtr: UnsafeMutablePointer<Element>
+        package var _cachedPtr: UnsafeMutablePointer<Element>
 
         /// The maximum number of elements the stack can hold.
         public let capacity: Int
@@ -298,7 +298,7 @@ public struct Stack<Element: ~Copyable>: ~Copyable {
                 throw .invalidCapacity
             }
 
-            self._storage = Storage<Element>.create(minimumCapacity: Index<Element>.Count(UInt(capacity)))
+            self._storage = Storage<Element>.create(minimumCapacity: Index_Primitives.Index<Element>.Count(UInt(capacity)))
             unsafe (self._cachedPtr = _storage.pointer(at: .zero).base)
             self.capacity = capacity
         }
@@ -315,17 +315,8 @@ public struct Stack<Element: ~Copyable>: ~Copyable {
         unsafe (self._cachedPtr = _storage.pointer(at: .zero).base)
     }
 
-    /// Creates a stack initialized with elements from a sequence.
-    ///
-    /// - Parameter elements: The elements to push onto the stack.
-    /// - Complexity: O(n) where n is the number of elements.
-    @inlinable
-    public init(_ elements: some Swift.Sequence<Element>) {
-        self.init()
-        for element in elements {
-            push(element)
-        }
-    }
+    // Note: init(_ elements: Sequence) is in Stack Dynamic Primitives
+    // because it requires push() which is defined there.
 
     /// Creates a stack with reserved capacity.
     ///
@@ -344,7 +335,7 @@ public struct Stack<Element: ~Copyable>: ~Copyable {
         if capacity == 0 {
             self._storage = Storage<Element>.create(minimumCapacity: .zero)
         } else {
-            self._storage = Storage<Element>.create(minimumCapacity: Index<Element>.Count(UInt(capacity)))
+            self._storage = Storage<Element>.create(minimumCapacity: Index_Primitives.Index<Element>.Count(UInt(capacity)))
         }
         unsafe (self._cachedPtr = _storage.pointer(at: .zero).base)
     }
@@ -370,51 +361,8 @@ extension Stack.Bounded: Copyable where Element: Copyable {}
 // for inline storage cleanup. If you need Copyable semantics, use Stack (which
 // always heap-allocates and can be conditionally Copyable).
 
-/// `Stack.Bounded` conforms to `Sequence` when `Element` is `Copyable`.
-///
-/// This enables `for-in` loops, `map`, `filter`, and other sequence operations.
-/// For `~Copyable` elements, use ``forEach(_:)`` instead.
-///
-/// - Note: This conformance must be in the same file as the type declaration
-///   due to a Swift compiler bug where protocol conformances for nested types
-///   in separate files cause `~Copyable` constraint propagation to fail.
-extension Stack.Bounded: Swift.Sequence where Element: Copyable {
-
-    /// An iterator over the elements of a bounded stack.
-    public struct Iterator: IteratorProtocol {
-        @usableFromInline
-        let _storage: Storage<Element>
-
-        @usableFromInline
-        var _index: Stack<Element>.Index = .zero
-
-        @usableFromInline
-        init(storage: Storage<Element>) {
-            self._storage = storage
-        }
-
-        /// Advances to the next element and returns it, or nil if no next element exists.
-        @inlinable
-        public mutating func next() -> Element? {
-            guard _index < Index<Element>(_storage.count) else { return nil }
-            let currentIndex = _index
-            _index = (_index + 1)!
-            return unsafe _storage.read(at: currentIndex).pointee
-        }
-    }
-
-    /// Returns an iterator over the elements of the stack.
-    ///
-    /// Elements are yielded from bottom (oldest) to top (newest).
-    @inlinable
-    public borrowing func makeIterator() -> Iterator {
-        Iterator(storage: _storage)
-    }
-
-    /// The underestimated count for `Sequence` conformance.
-    @inlinable
-    public var underestimatedCount: Int { Int(_storage.count.count) }
-}
+// Note: Stack.Bounded: Swift.Sequence conformance is in Stack Bounded Primitives module
+// to avoid constraint poisoning on the Core type.
 
 // MARK: - Sendable
 

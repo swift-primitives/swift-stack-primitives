@@ -433,8 +433,8 @@ struct MoveOnlyElementTests {
 @Suite("Stack.Inline")
 struct StackInlineTests {
     @Test("Initialize empty stack")
-    func initializeEmptyStack() {
-        let stack = Stack<Int>.Inline<4>()
+    func initializeEmptyStack() throws {
+        let stack = try Stack<Int>.Inline<4>()
         #expect(stack.count == 0)
         #expect(stack.isEmpty == true)
         #expect(stack.isFull == false)
@@ -443,7 +443,7 @@ struct StackInlineTests {
 
     @Test("Push and pop single element")
     func pushAndPopSingleElement() throws {
-        var stack = Stack<Int>.Inline<4>()
+        var stack = try Stack<Int>.Inline<4>()
         try stack.push(42)
         #expect(stack.count == 1)
         #expect(stack.isEmpty == false)
@@ -456,7 +456,7 @@ struct StackInlineTests {
 
     @Test("Push and pop multiple elements (LIFO order)")
     func pushAndPopMultipleElements() throws {
-        var stack = Stack<Int>.Inline<4>()
+        var stack = try Stack<Int>.Inline<4>()
         try stack.push(1)
         try stack.push(2)
         try stack.push(3)
@@ -468,14 +468,14 @@ struct StackInlineTests {
     }
 
     @Test("Pop from empty stack returns nil")
-    func popFromEmptyStack() {
-        var stack = Stack<Int>.Inline<4>()
+    func popFromEmptyStack() throws {
+        var stack = try Stack<Int>.Inline<4>()
         #expect(stack.pop() == nil)
     }
 
     @Test("Push to full stack throws overflow")
     func pushToFullStackThrows() throws {
-        var stack = Stack<Int>.Inline<2>()
+        var stack = try Stack<Int>.Inline<2>()
         try stack.push(1)
         try stack.push(2)
         #expect(stack.isFull == true)
@@ -487,7 +487,7 @@ struct StackInlineTests {
 
     @Test("Peek returns top element without removing")
     func peekReturnsTopWithoutRemoving() throws {
-        var stack = Stack<Int>.Inline<4>()
+        var stack = try Stack<Int>.Inline<4>()
         try stack.push(1)
         try stack.push(2)
 
@@ -500,15 +500,15 @@ struct StackInlineTests {
     }
 
     @Test("Peek on empty stack returns nil")
-    func peekOnEmptyStackReturnsNil() {
-        let stack = Stack<Int>.Inline<4>()
+    func peekOnEmptyStackReturnsNil() throws {
+        let stack = try Stack<Int>.Inline<4>()
         let result = stack.peek { $0 }
         #expect(result == nil)
     }
 
     @Test("Peek sugar returns top element for Copyable")
     func peekSugarReturnsCopyableElement() throws {
-        var stack = Stack<Int>.Inline<4>()
+        var stack = try Stack<Int>.Inline<4>()
         try stack.push(1)
         try stack.push(2)
 
@@ -519,7 +519,7 @@ struct StackInlineTests {
 
     @Test("Clear removes all elements")
     func clearRemovesAllElements() throws {
-        var stack = Stack<Int>.Inline<4>()
+        var stack = try Stack<Int>.Inline<4>()
         try stack.push(1)
         try stack.push(2)
         try stack.push(3)
@@ -532,7 +532,7 @@ struct StackInlineTests {
 
     @Test("Fill to capacity")
     func fillToCapacity() throws {
-        var stack = Stack<Int>.Inline<4>()
+        var stack = try Stack<Int>.Inline<4>()
         #expect(stack.isFull == false)
 
         try stack.push(1)
@@ -546,7 +546,7 @@ struct StackInlineTests {
 
     @Test("span provides read-only indexed access")
     func spanProvidesReadOnlyIndexedAccess() throws {
-        var stack = Stack<Int>.Inline<4>()
+        var stack = try Stack<Int>.Inline<4>()
         try stack.push(1)
         try stack.push(2)
         try stack.push(3)
@@ -564,7 +564,7 @@ struct StackInlineTests {
 
     @Test("mutableSpan provides mutable indexed access")
     func mutableSpanProvidesMutableIndexedAccess() throws {
-        var stack = Stack<Int>.Inline<4>()
+        var stack = try Stack<Int>.Inline<4>()
         try stack.push(1)
         try stack.push(2)
         try stack.push(3)
@@ -593,7 +593,7 @@ struct StackInlineMoveOnlyTests {
 
     @Test("Inline stack with move-only elements")
     func inlineStackWithMoveOnlyElements() throws {
-        var stack = Stack<MoveOnlyValue>.Inline<4>()
+        var stack = try Stack<MoveOnlyValue>.Inline<4>()
         try stack.push(MoveOnlyValue(1))
         try stack.push(MoveOnlyValue(2))
 
@@ -606,7 +606,7 @@ struct StackInlineMoveOnlyTests {
 
     @Test("Peek with move-only elements uses borrowing")
     func peekWithMoveOnlyElementsUsesBorrowing() throws {
-        var stack = Stack<MoveOnlyValue>.Inline<4>()
+        var stack = try Stack<MoveOnlyValue>.Inline<4>()
         try stack.push(MoveOnlyValue(42))
 
         // Peek borrows without moving
@@ -626,7 +626,7 @@ struct StackInlineMoveOnlyTests {
 
     @Test("Clear with move-only elements")
     func clearWithMoveOnlyElements() throws {
-        var stack = Stack<MoveOnlyValue>.Inline<4>()
+        var stack = try Stack<MoveOnlyValue>.Inline<4>()
         try stack.push(MoveOnlyValue(1))
         try stack.push(MoveOnlyValue(2))
         try stack.push(MoveOnlyValue(3))
@@ -638,7 +638,7 @@ struct StackInlineMoveOnlyTests {
 
     @Test("Fill and empty cycle with move-only elements")
     func fillAndEmptyCycleWithMoveOnlyElements() throws {
-        var stack = Stack<MoveOnlyValue>.Inline<4>()
+        var stack = try Stack<MoveOnlyValue>.Inline<4>()
 
         // Fill
         for i in 0..<4 {
@@ -686,7 +686,7 @@ struct StackInlineStressTests {
         let tracker = DeinitTracker()
 
         // Create stack and populate it
-        var stack = Stack<TrackedValue>.Inline<8>()
+        var stack = try Stack<TrackedValue>.Inline<8>()
         try stack.push(TrackedValue(1, tracker: tracker))
         try stack.push(TrackedValue(2, tracker: tracker))
         try stack.push(TrackedValue(3, tracker: tracker))
@@ -719,7 +719,7 @@ struct StackInlineStressTests {
     @Test("Clear properly deinitializes elements")
     func clearProperlyDeinitializes() throws {
         let tracker = DeinitTracker()
-        var stack = Stack<TrackedValue>.Inline<8>()
+        var stack = try Stack<TrackedValue>.Inline<8>()
 
         try stack.push(TrackedValue(1, tracker: tracker))
         try stack.push(TrackedValue(2, tracker: tracker))
@@ -737,7 +737,7 @@ struct StackInlineStressTests {
     @Test("Pop properly deinitializes moved element")
     func popProperlyMoves() throws {
         let tracker = DeinitTracker()
-        var stack = Stack<TrackedValue>.Inline<8>()
+        var stack = try Stack<TrackedValue>.Inline<8>()
 
         try stack.push(TrackedValue(1, tracker: tracker))
         #expect(tracker.deinitCount == 0)
@@ -756,7 +756,7 @@ struct StackInlineStressTests {
     @Test("Multiple fill-empty cycles stress test")
     func multipleFillEmptyCycles() throws {
         let tracker = DeinitTracker()
-        var stack = Stack<TrackedValue>.Inline<4>()
+        var stack = try Stack<TrackedValue>.Inline<4>()
 
         for cycle in 0..<100 {
             // Fill
@@ -777,7 +777,7 @@ struct StackInlineStressTests {
     @Test("Interleaved push-pop stress test")
     func interleavedPushPop() throws {
         let tracker = DeinitTracker()
-        var stack = Stack<TrackedValue>.Inline<16>()
+        var stack = try Stack<TrackedValue>.Inline<16>()
 
         var totalPushed = 0
         var totalPopped = 0
@@ -814,7 +814,7 @@ struct StackInlineStressTests {
             var g: Int64 = 7
         }
 
-        var stack = Stack<LargeValue>.Inline<4>()
+        var stack = try Stack<LargeValue>.Inline<4>()
         try stack.push(LargeValue())
         try stack.push(LargeValue())
         try stack.push(LargeValue())
@@ -832,7 +832,7 @@ struct StackInlineStressTests {
     func partialFillThenClear() throws {
         let tracker = DeinitTracker()
 
-        var stack = Stack<TrackedValue>.Inline<16>()
+        var stack = try Stack<TrackedValue>.Inline<16>()
         // Only fill partially
         for i in 0..<5 {
             try stack.push(TrackedValue(i, tracker: tracker))
@@ -849,7 +849,7 @@ struct StackInlineStressTests {
 
     @Test("mutableSpan modification stress test")
     func mutableSpanModificationStress() throws {
-        var stack = Stack<Int>.Inline<16>()
+        var stack = try Stack<Int>.Inline<16>()
 
         for i in 0..<16 {
             try stack.push(i)
@@ -868,7 +868,7 @@ struct StackInlineStressTests {
 
     @Test("Overflow protection stress test")
     func overflowProtectionStressTest() throws {
-        var stack = Stack<Int>.Inline<4>()
+        var stack = try Stack<Int>.Inline<4>()
 
         // Fill to capacity
         for i in 0..<4 {
@@ -891,8 +891,8 @@ struct StackInlineStressTests {
     }
 
     @Test("Empty stack operations stress test")
-    func emptyStackOperationsStressTest() {
-        var stack = Stack<Int>.Inline<4>()
+    func emptyStackOperationsStressTest() throws {
+        var stack = try Stack<Int>.Inline<4>()
 
         // Many pops on empty stack
         for _ in 0..<100 {
@@ -916,16 +916,16 @@ struct StackInlineStressTests {
 @Suite("Stack.Small")
 struct StackSmallTests {
     @Test("Initialize empty stack")
-    func initializeEmptyStack() {
-        let stack = Stack<Int>.Small<4>()
+    func initializeEmptyStack() throws {
+        let stack = try Stack<Int>.Small<4>()
         #expect(stack.count == 0)
         #expect(stack.isEmpty == true)
         #expect(stack.isSpilled == false)
     }
 
     @Test("Push and pop within inline capacity")
-    func pushAndPopWithinInlineCapacity() {
-        var stack = Stack<Int>.Small<4>()
+    func pushAndPopWithinInlineCapacity() throws {
+        var stack = try Stack<Int>.Small<4>()
         stack.push(1)
         stack.push(2)
         stack.push(3)
@@ -940,8 +940,8 @@ struct StackSmallTests {
     }
 
     @Test("Spill to heap when exceeding inline capacity")
-    func spillToHeapWhenExceedingInlineCapacity() {
-        var stack = Stack<Int>.Small<4>()
+    func spillToHeapWhenExceedingInlineCapacity() throws {
+        var stack = try Stack<Int>.Small<4>()
 
         // Fill inline capacity
         for i in 0..<4 {
@@ -972,8 +972,8 @@ struct StackSmallTests {
     }
 
     @Test("Peek from inline storage")
-    func peekFromInlineStorage() {
-        var stack = Stack<Int>.Small<4>()
+    func peekFromInlineStorage() throws {
+        var stack = try Stack<Int>.Small<4>()
         stack.push(42)
 
         #expect(stack.peek() == 42)
@@ -982,8 +982,8 @@ struct StackSmallTests {
     }
 
     @Test("Peek from heap storage")
-    func peekFromHeapStorage() {
-        var stack = Stack<Int>.Small<2>()
+    func peekFromHeapStorage() throws {
+        var stack = try Stack<Int>.Small<2>()
         stack.push(1)
         stack.push(2)
         stack.push(3) // Triggers spill
@@ -994,8 +994,8 @@ struct StackSmallTests {
     }
 
     @Test("Clear inline storage")
-    func clearInlineStorage() {
-        var stack = Stack<Int>.Small<4>()
+    func clearInlineStorage() throws {
+        var stack = try Stack<Int>.Small<4>()
         stack.push(1)
         stack.push(2)
         stack.push(3)
@@ -1007,8 +1007,8 @@ struct StackSmallTests {
     }
 
     @Test("Clear heap storage")
-    func clearHeapStorage() {
-        var stack = Stack<Int>.Small<2>()
+    func clearHeapStorage() throws {
+        var stack = try Stack<Int>.Small<2>()
         stack.push(1)
         stack.push(2)
         stack.push(3) // Triggers spill
@@ -1021,8 +1021,8 @@ struct StackSmallTests {
     }
 
     @Test("Truncate within inline storage")
-    func truncateWithinInlineStorage() {
-        var stack = Stack<Int>.Small<4>()
+    func truncateWithinInlineStorage() throws {
+        var stack = try Stack<Int>.Small<4>()
         stack.push(1)
         stack.push(2)
         stack.push(3)
@@ -1035,8 +1035,8 @@ struct StackSmallTests {
     }
 
     @Test("Truncate within heap storage")
-    func truncateWithinHeapStorage() {
-        var stack = Stack<Int>.Small<2>()
+    func truncateWithinHeapStorage() throws {
+        var stack = try Stack<Int>.Small<2>()
         stack.push(1)
         stack.push(2)
         stack.push(3)
@@ -1050,8 +1050,8 @@ struct StackSmallTests {
     }
 
     @Test("Span access from inline storage")
-    func spanAccessFromInlineStorage() {
-        var stack = Stack<Int>.Small<4>()
+    func spanAccessFromInlineStorage() throws {
+        var stack = try Stack<Int>.Small<4>()
         stack.push(1)
         stack.push(2)
         stack.push(3)
@@ -1061,8 +1061,8 @@ struct StackSmallTests {
     }
 
     @Test("Span access from heap storage")
-    func spanAccessFromHeapStorage() {
-        var stack = Stack<Int>.Small<2>()
+    func spanAccessFromHeapStorage() throws {
+        var stack = try Stack<Int>.Small<2>()
         stack.push(1)
         stack.push(2)
         stack.push(3)
@@ -1072,8 +1072,8 @@ struct StackSmallTests {
     }
 
     @Test("ForEach iteration")
-    func forEachIteration() {
-        var stack = Stack<Int>.Small<4>()
+    func forEachIteration() throws {
+        var stack = try Stack<Int>.Small<4>()
         stack.push(1)
         stack.push(2)
         stack.push(3)
@@ -1084,8 +1084,8 @@ struct StackSmallTests {
     }
 
     @Test("Capacity property reflects current state")
-    func capacityReflectsCurrentState() {
-        var stack = Stack<Int>.Small<4>()
+    func capacityReflectsCurrentState() throws {
+        var stack = try Stack<Int>.Small<4>()
         #expect(stack.capacity == 4) // Inline capacity
 
         stack.push(1)
@@ -1108,8 +1108,8 @@ struct StackSmallMoveOnlyTests {
     }
 
     @Test("Push and pop move-only elements within inline capacity")
-    func pushAndPopMoveOnlyWithinInline() {
-        var stack = Stack<MoveOnlyValue>.Small<4>()
+    func pushAndPopMoveOnlyWithinInline() throws {
+        var stack = try Stack<MoveOnlyValue>.Small<4>()
         stack.push(MoveOnlyValue(1))
         stack.push(MoveOnlyValue(2))
 
@@ -1127,8 +1127,8 @@ struct StackSmallMoveOnlyTests {
     }
 
     @Test("Spill move-only elements to heap")
-    func spillMoveOnlyToHeap() {
-        var stack = Stack<MoveOnlyValue>.Small<2>()
+    func spillMoveOnlyToHeap() throws {
+        var stack = try Stack<MoveOnlyValue>.Small<2>()
         stack.push(MoveOnlyValue(1))
         stack.push(MoveOnlyValue(2))
         stack.push(MoveOnlyValue(3)) // Triggers spill
@@ -1143,8 +1143,8 @@ struct StackSmallMoveOnlyTests {
     }
 
     @Test("Peek with move-only elements uses borrowing")
-    func peekWithMoveOnlyElementsUsesBorrowing() {
-        var stack = Stack<MoveOnlyValue>.Small<4>()
+    func peekWithMoveOnlyElementsUsesBorrowing() throws {
+        var stack = try Stack<MoveOnlyValue>.Small<4>()
         stack.push(MoveOnlyValue(42))
 
         let peekedValue = stack.peek { $0.value }
@@ -1153,8 +1153,8 @@ struct StackSmallMoveOnlyTests {
     }
 
     @Test("Clear move-only elements")
-    func clearMoveOnlyElements() {
-        var stack = Stack<MoveOnlyValue>.Small<4>()
+    func clearMoveOnlyElements() throws {
+        var stack = try Stack<MoveOnlyValue>.Small<4>()
         stack.push(MoveOnlyValue(1))
         stack.push(MoveOnlyValue(2))
         stack.push(MoveOnlyValue(3))

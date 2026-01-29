@@ -1,13 +1,17 @@
 // ===----------------------------------------------------------------------===//
 //
-// This source file is part of the swift-standards open source project
+// This source file is part of the swift-primitives open source project
 //
-// Copyright (c) 2024-2026 Coen ten Thije Boonkkamp and the swift-standards project authors
+// Copyright (c) 2024-2026 Coen ten Thije Boonkkamp and the swift-primitives project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE for license information
 //
 // ===----------------------------------------------------------------------===//
+
+public import Stack_Primitives_Core
+public import Index_Primitives
+public import Range_Primitives
 
 // Note: Stack.Small is declared INSIDE the Stack struct body (in Stack.swift)
 // due to a Swift compiler bug where nested types with value generic parameters
@@ -51,7 +55,7 @@ extension Stack.Small where Element: ~Copyable {
             _pushToHeap(element)
         } else if _count < inlineCapacity {
             // Still inline and have space
-            _inline.initialize(to: element, at: Index<Element>(UInt(_count)))
+            _inline.initialize(to: element, at: Stack<Element>.Index(Ordinal(UInt(_count))))
             _count += 1
         } else {
             // Need to spill
@@ -113,7 +117,7 @@ extension Stack.Small where Element: ~Copyable {
             heap.count = Index<Element>.Count(UInt(_count))
             return unsafe (heapPtr + _count).move()
         } else {
-            return _inline.move(at: Index<Element>(UInt(_count)))
+            return _inline.move(at: Stack<Element>.Index(Ordinal(UInt(_count))))
         }
     }
 
@@ -158,7 +162,7 @@ extension Stack.Small where Element: ~Copyable {
         if let heapPtr = unsafe _heapPtr {
             return try unsafe body((heapPtr + _count - 1).pointee)
         } else {
-            let topIndex = Index<Element>(UInt(_count - 1))
+            let topIndex = Stack<Element>.Index(Ordinal(UInt(_count - 1)))
             return try unsafe body(_inline.read(at: topIndex).pointee)
         }
     }
@@ -181,7 +185,7 @@ extension Stack.Small where Element: Copyable {
         if let heapPtr = unsafe _heapPtr {
             return unsafe (heapPtr + _count - 1).pointee
         } else {
-            let topIndex = Index<Element>(UInt(_count - 1))
+            let topIndex = Stack<Element>.Index(Ordinal(UInt(_count - 1)))
             return unsafe _inline.read(at: topIndex).pointee
         }
     }
@@ -199,7 +203,7 @@ extension Stack.Small where Element: ~Copyable {
             if let heapPtr = unsafe _heapPtr {
                 yield unsafe Span(_unsafeStart: heapPtr, count: _count)
             } else {
-                let basePtr = unsafe UnsafePointer(_inline.pointer(at: .zero).base)
+                let basePtr = unsafe _inline.read(at: .zero).base
                 yield unsafe Span(_unsafeStart: basePtr, count: _count)
             }
         }
@@ -214,7 +218,7 @@ extension Stack.Small where Element: ~Copyable {
             if let heapPtr = unsafe _heapPtr {
                 yield unsafe MutableSpan(_unsafeStart: heapPtr, count: _count)
             } else {
-                let ptr = unsafe UnsafeMutablePointer(mutating: _inline.pointer(at: .zero).base)
+                let ptr = unsafe UnsafeMutablePointer(mutating: _inline.read(at: .zero).base)
                 yield unsafe MutableSpan(_unsafeStart: ptr, count: _count)
             }
         }
@@ -254,7 +258,7 @@ extension Stack.Small where Element: ~Copyable {
             }
         } else {
             for i in 0..<_count {
-                let index = Index<Element>(UInt(i))
+                let index = Stack<Element>.Index(Ordinal(UInt(i)))
                 try unsafe body(_inline.read(at: index).pointee)
             }
         }
@@ -277,16 +281,15 @@ extension Stack.Small where Element: ~Copyable {
         let targetCount = Swift.max(0, newCount)
 
         if let heap = _heap {
-            let range = Range.Lazy<Index<Element>>(
-                lowerBound: Index<Element>(UInt(targetCount)),
-                upperBound: Index<Element>(UInt(_count))
-            )
+            let startIdx = Stack<Element>.Index(Ordinal(UInt(targetCount)))
+            let endIdx = Stack<Element>.Index(Ordinal(UInt(_count)))
+            let range = Range.Lazy(startIdx..<endIdx)
             heap.deinitialize(in: range)
-            heap.count = Index<Element>.Count(UInt(targetCount))
+            heap.count = Stack<Element>.Index.Count(UInt(targetCount))
         } else {
             for i in targetCount..<_count {
-                let index = Index<Element>(UInt(i))
-                unsafe _inline.pointer(at: index).deinitialize(count: 1)
+                let index = Stack<Element>.Index(Ordinal(UInt(i)))
+                unsafe _inline.pointer(at: index).deinitialize(count: .one)
             }
         }
         _count = targetCount

@@ -1,13 +1,17 @@
 // ===----------------------------------------------------------------------===//
 //
-// This source file is part of the swift-standards open source project
+// This source file is part of the swift-primitives open source project
 //
-// Copyright (c) 2024-2025 Coen ten Thije Boonkkamp and the swift-standards project authors
+// Copyright (c) 2024-2026 Coen ten Thije Boonkkamp and the swift-primitives project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE for license information
 //
 // ===----------------------------------------------------------------------===//
+
+public import Stack_Primitives_Core
+public import Index_Primitives
+public import Range_Primitives
 
 // Note: Stack.Inline is declared INSIDE the Stack struct body (in Stack.swift)
 // due to a Swift compiler bug where nested types with value generic parameters
@@ -43,7 +47,7 @@ extension Stack.Inline where Element: ~Copyable {
         guard _count < Self.capacity else {
             throw .overflow
         }
-        _storage.initialize(to: element, at: Index<Element>(UInt(_count)))
+        _storage.initialize(to: element, at: Stack<Element>.Index(Ordinal(UInt(_count))))
         _count += 1
     }
 
@@ -57,7 +61,7 @@ extension Stack.Inline where Element: ~Copyable {
             return nil
         }
         _count -= 1
-        return _storage.move(at: Index<Element>(UInt(_count)))
+        return _storage.move(at: Stack<Element>.Index(Ordinal(UInt(_count))))
     }
 
     /// Removes all elements from the stack.
@@ -68,7 +72,7 @@ extension Stack.Inline where Element: ~Copyable {
     /// - Complexity: O(n) where n is the number of elements.
     @inlinable
     public mutating func clear() {
-        _storage.deinitialize(count: Index<Element>.Count(UInt(_count)))
+        _storage.deinitialize(count: Stack<Element>.Index.Count(UInt(_count)))
         _count = 0
     }
 }
@@ -88,7 +92,7 @@ extension Stack.Inline where Element: ~Copyable {
         guard _count > 0 else {
             return nil
         }
-        let topIndex = Index<Element>(UInt(_count - 1))
+        let topIndex = Stack<Element>.Index(Ordinal(UInt(_count - 1)))
         return try unsafe body(_storage.read(at: topIndex).pointee)
     }
 }
@@ -106,7 +110,7 @@ extension Stack.Inline where Element: Copyable {
         guard _count > 0 else {
             return nil
         }
-        let topIndex = Index<Element>(UInt(_count - 1))
+        let topIndex = Stack<Element>.Index(Ordinal(UInt(_count - 1)))
         return unsafe _storage.read(at: topIndex).pointee
     }
 }
@@ -134,7 +138,7 @@ extension Stack.Inline where Element: ~Copyable {
     @inlinable
     public var span: Span<Element> {
         _read {
-            let basePtr = unsafe UnsafePointer(_storage.pointer(at: .zero).base)
+            let basePtr = unsafe _storage.read(at: .zero).base
             yield unsafe Span(_unsafeStart: basePtr, count: _count)
         }
     }
@@ -161,7 +165,7 @@ extension Stack.Inline where Element: ~Copyable {
         _read {
             // For _read, we provide read-only access through the span.
             // Using mutating cast is safe here because _read doesn't allow mutation.
-            let ptr = unsafe UnsafeMutablePointer(mutating: _storage.pointer(at: .zero).base)
+            let ptr = unsafe UnsafeMutablePointer(mutating: _storage.read(at: .zero).base)
             yield unsafe MutableSpan(_unsafeStart: ptr, count: _count)
         }
         _modify {
@@ -196,7 +200,7 @@ extension Stack.Inline where Element: ~Copyable {
         _ body: (borrowing Element) throws(E) -> Void
     ) throws(E) {
         for i in 0..<_count {
-            let index = Index<Element>(UInt(i))
+            let index = Stack<Element>.Index(Ordinal(UInt(i)))
             try unsafe body(_storage.read(at: index).pointee)
         }
     }
@@ -218,8 +222,8 @@ extension Stack.Inline where Element: ~Copyable {
         let targetCount = Swift.max(0, newCount)
 
         for i in targetCount..<_count {
-            let index = Index<Element>(UInt(i))
-            unsafe _storage.pointer(at: index).deinitialize(count: 1)
+            let index = Stack<Element>.Index(Ordinal(UInt(i)))
+            unsafe _storage.pointer(at: index).deinitialize(count: .one)
         }
         _count = targetCount
     }

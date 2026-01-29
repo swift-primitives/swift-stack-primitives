@@ -1,20 +1,24 @@
 // ===----------------------------------------------------------------------===//
 //
-// This source file is part of the swift-standards open source project
+// This source file is part of the swift-primitives open source project
 //
-// Copyright (c) 2024-2026 Coen ten Thije Boonkkamp and the swift-standards project authors
+// Copyright (c) 2024-2026 Coen ten Thije Boonkkamp and the swift-primitives project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE for license information
 //
 // ===----------------------------------------------------------------------===//
 
+public import Stack_Primitives_Core
+public import Index_Primitives
+public import Range_Primitives
+
 // MARK: - Properties
 
 extension Stack where Element: ~Copyable {
     /// The current number of elements in the stack.
     @inlinable
-    public var count: Int { Int(_storage.count.count) }
+    public var count: Int { Int(bitPattern: _storage.count) }
 
     /// Whether the stack is empty.
     @inlinable
@@ -35,7 +39,7 @@ extension Stack where Element: ~Copyable {
 
         // Growth factor 2.0, minimum capacity 4
         let newCapacity = Swift.max(minimumCapacity, _storage.capacity * 2, 4)
-        let newStorage = Storage<Element>.create(minimumCapacity: Index<Element>.Count(UInt(newCapacity)))
+        let newStorage = Storage<Element>.create(minimumCapacity: Index.Count(UInt(newCapacity)))
         let currentCount = _storage.count
 
         _storage.move(to: newStorage, count: currentCount)
@@ -65,9 +69,9 @@ extension Stack where Element: ~Copyable {
     /// - Complexity: O(1) amortized
     @inlinable
     public mutating func push(_ element: consuming Element) {
-        let currentCount = Int(_storage.count.count)
+        let currentCount = Int(bitPattern: _storage.count)
         ensureCapacity(currentCount + 1)
-        let index = Index<Element>(_storage.count)
+        let index = Index(_storage.count)
         _storage.initialize(to: element, at: index)
         _storage.count = _storage.count + .one
     }
@@ -81,8 +85,8 @@ extension Stack where Element: ~Copyable {
         guard _storage.count > .zero else {
             return nil
         }
-        _storage.count = try! _storage.count - .one  // Safe: count > 0
-        return _storage.move(at: Index<Element>(_storage.count))
+        _storage.count = try! _storage.count.subtract.exact(.one)  // Safe: count > 0
+        return _storage.move(at: Index(_storage.count))
     }
 
     /// Removes all elements from the stack.
@@ -120,7 +124,7 @@ extension Stack where Element: ~Copyable {
         guard _storage.count > .zero else {
             return nil
         }
-        let topIndex = try! Index<Element>(_storage.count) - .one  // Safe: count > 0
+        let topIndex = Index(Ordinal(UInt(Int(bitPattern: _storage.count) - 1)))  // Safe: count > 0
         return body(unsafe _storage.read(at: topIndex).pointee)
     }
 }
@@ -141,7 +145,7 @@ extension Stack where Element: ~Copyable {
         @_lifetime(borrow self)
         @inlinable
         borrowing get {
-            unsafe Span(_unsafeStart: _cachedPtr, count: Int(_storage.count.count))
+            unsafe Span(_unsafeStart: _cachedPtr, count: Int(bitPattern: _storage.count))
         }
     }
 
@@ -155,7 +159,7 @@ extension Stack where Element: ~Copyable {
         @_lifetime(&self)
         @inlinable
         mutating get {
-            unsafe MutableSpan(_unsafeStart: _cachedPtr, count: Int(_storage.count.count))
+            unsafe MutableSpan(_unsafeStart: _cachedPtr, count: Int(bitPattern: _storage.count))
         }
     }
 }
@@ -174,9 +178,9 @@ extension Stack where Element: ~Copyable {
         at index: Index,
         _ body: (UnsafePointer<Element>) -> R
     ) -> R {
-        precondition(index >= .zero && index < Index<Element>(_storage.count))
+        precondition(index >= .zero && index < Index(_storage.count))
         return unsafe _storage.withUnsafeMutablePointerToElements { elements in
-            unsafe body(elements + index.position)
+            unsafe body(elements + Int(bitPattern: index))
         }
     }
 
@@ -191,9 +195,9 @@ extension Stack where Element: ~Copyable {
         at index: Index,
         _ body: (UnsafeMutablePointer<Element>) -> R
     ) -> R {
-        precondition(index >= .zero && index < Index<Element>(_storage.count))
+        precondition(index >= .zero && index < Index(_storage.count))
         return unsafe _storage.withUnsafeMutablePointerToElements { elements in
-            unsafe body(elements + index.position)
+            unsafe body(elements + Int(bitPattern: index))
         }
     }
 }
@@ -229,7 +233,7 @@ extension Stack where Element: ~Copyable {
     @inlinable
     public mutating func compact() {
         let currentCount = _storage.count
-        guard _storage.capacity > Int(currentCount.count) else { return }
+        guard _storage.capacity > Int(bitPattern: currentCount) else { return }
 
         if currentCount == .zero {
             _storage = Storage<Element>.create(minimumCapacity: .zero)
@@ -253,15 +257,14 @@ extension Stack where Element: ~Copyable {
     /// - Complexity: O(k) where k is the number of removed elements.
     @inlinable
     public mutating func truncate(to newCount: Int) {
-        let currentCount = Int(_storage.count.count)
+        let currentCount = Int(bitPattern: _storage.count)
         guard newCount < currentCount else { return }
         let targetCount = Swift.max(0, newCount)
 
-        let range = Range.Lazy<Index<Element>>(
-            lowerBound: Index<Element>(UInt(targetCount)),
-            upperBound: Index<Element>(_storage.count)
-        )
+        let startIdx = Index(Ordinal(UInt(targetCount)))
+        let endIdx = Index(Ordinal(UInt(currentCount)))
+        let range = Range.Lazy(startIdx..<endIdx)
         _storage.deinitialize(in: range)
-        _storage.count = Index<Element>.Count(UInt(targetCount))
+        _storage.count = Index.Count(UInt(targetCount))
     }
 }

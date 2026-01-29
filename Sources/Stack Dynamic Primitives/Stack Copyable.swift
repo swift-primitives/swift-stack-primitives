@@ -1,13 +1,17 @@
 // ===----------------------------------------------------------------------===//
 //
-// This source file is part of the swift-standards open source project
+// This source file is part of the swift-primitives open source project
 //
-// Copyright (c) 2024-2026 Coen ten Thije Boonkkamp and the swift-standards project authors
+// Copyright (c) 2024-2026 Coen ten Thije Boonkkamp and the swift-primitives project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE for license information
 //
 // ===----------------------------------------------------------------------===//
+
+public import Stack_Primitives_Core
+public import Index_Primitives
+public import Range_Primitives
 
 // MARK: - Copy-on-Write (Copyable elements only)
 
@@ -31,9 +35,9 @@ extension Stack where Element: Copyable {
     @inlinable
     public mutating func push(_ element: Element) {
         makeUnique()
-        let currentCount = Int(_storage.count.count)
+        let currentCount = Int(bitPattern: _storage.count)
         ensureCapacity(currentCount + 1)
-        let index = Index<Element>(_storage.count)
+        let index = Index(_storage.count)
         _storage.initialize(to: element, at: index)
         _storage.count = _storage.count + .one
     }
@@ -51,8 +55,8 @@ extension Stack where Element: Copyable {
         guard _storage.count > .zero else {
             return nil
         }
-        _storage.count = try! _storage.count - .one  // Safe: count > 0
-        return _storage.move(at: Index<Element>(_storage.count))
+        _storage.count = try! _storage.count.subtract.exact(.one)  // Safe: count > 0
+        return _storage.move(at: Index(_storage.count))
     }
 
     /// Removes all elements from the stack (CoW-aware).
@@ -91,7 +95,7 @@ extension Stack {
         guard _storage.count > .zero else {
             return nil
         }
-        let topIndex = try! Index<Element>(_storage.count) - .one  // Safe: count > 0
+        let topIndex = Index(Ordinal(UInt(Int(bitPattern: _storage.count) - 1)))  // Safe: count > 0
         return unsafe _storage.read(at: topIndex).pointee
     }
 }
@@ -110,7 +114,7 @@ extension Stack where Element: Copyable {
         @inlinable
         mutating get {
             makeUnique()
-            return unsafe MutableSpan(_unsafeStart: _cachedPtr, count: Int(_storage.count.count))
+            return unsafe MutableSpan(_unsafeStart: _cachedPtr, count: Int(bitPattern: _storage.count))
         }
     }
 }
@@ -139,9 +143,9 @@ extension Stack: Swift.Sequence where Element: Copyable {
         /// Advances to the next element and returns it, or nil if no next element exists.
         @inlinable
         public mutating func next() -> Element? {
-            guard _index < Index<Element>(_storage.count) else { return nil }
+            guard _index < Index(_storage.count) else { return nil }
             let currentIndex = _index
-            _index = (_index + 1)!
+            _index = _index + .one
             return unsafe _storage.read(at: currentIndex).pointee
         }
     }
@@ -156,7 +160,7 @@ extension Stack: Swift.Sequence where Element: Copyable {
 
     /// The underestimated count for `Sequence` conformance.
     @inlinable
-    public var underestimatedCount: Int { Int(_storage.count.count) }
+    public var underestimatedCount: Int { Int(bitPattern: _storage.count) }
 }
 
 // MARK: - CoW-aware Capacity Management (Copyable elements)
@@ -171,7 +175,7 @@ extension Stack where Element: Copyable {
     public mutating func compact() {
         makeUnique()
         let currentCount = _storage.count
-        guard _storage.capacity > Int(currentCount.count) else { return }
+        guard _storage.capacity > Int(bitPattern: currentCount) else { return }
 
         if currentCount == .zero {
             _storage = Storage<Element>.create(minimumCapacity: .zero)
@@ -196,15 +200,14 @@ extension Stack where Element: Copyable {
     @inlinable
     public mutating func truncate(to newCount: Int) {
         makeUnique()
-        let currentCount = Int(_storage.count.count)
+        let currentCount = Int(bitPattern: _storage.count)
         guard newCount < currentCount else { return }
         let targetCount = Swift.max(0, newCount)
 
-        let range = Range.Lazy<Index<Element>>(
-            lowerBound: Index<Element>(UInt(targetCount)),
-            upperBound: Index<Element>(_storage.count)
-        )
+        let startIdx = Index(Ordinal(UInt(targetCount)))
+        let endIdx = Index(Ordinal(UInt(currentCount)))
+        let range = Range.Lazy(startIdx..<endIdx)
         _storage.deinitialize(in: range)
-        _storage.count = Index<Element>.Count(UInt(targetCount))
+        _storage.count = Index.Count(UInt(targetCount))
     }
 }
