@@ -133,8 +133,7 @@ extension Stack.Bounded where Element: ~Copyable {
         guard _storage.count > .zero else {
             return nil
         }
-        let topIndex = Stack<Element>.Index(Ordinal(UInt(Int(bitPattern: _storage.count) - 1)))  // Safe: count > 0
-        return body(unsafe _storage.read(at: topIndex).pointee)
+        return body(unsafe _cachedPtr[Int(bitPattern: _storage.count) - 1])
     }
 }
 
@@ -145,8 +144,7 @@ extension Stack.Bounded where Element: Copyable {
         guard _storage.count > .zero else {
             return nil
         }
-        let topIndex = Stack<Element>.Index(Ordinal(UInt(Int(bitPattern: _storage.count) - 1)))  // Safe: count > 0
-        return unsafe _storage.read(at: topIndex).pointee
+        return unsafe _cachedPtr[Int(bitPattern: _storage.count) - 1]
     }
 }
 
@@ -224,9 +222,9 @@ extension Stack.Bounded where Element: ~Copyable {
     /// Calls the given closure for each element in the stack.
     @inlinable
     public func forEach(_ body: (borrowing Element) -> Void) {
-        let count = _storage.count
-        (.zero..<count).forEach { index in
-            body(unsafe _storage.read(at: index).pointee)
+        let s = span
+        for i in 0..<Int(bitPattern: _storage.count) {
+            body(s[i])
         }
     }
 }
@@ -317,7 +315,7 @@ extension Stack.Bounded where Element: Copyable {
     @inlinable
     public func element(at index: Stack<Element>.Index) -> Element? {
         guard index >= .zero && Int(bitPattern: index) < Int(bitPattern: _storage.count) else { return nil }
-        return unsafe _storage.read(at: index).pointee
+        return unsafe _cachedPtr[Int(bitPattern: index)]
     }
 }
 

@@ -158,13 +158,7 @@ extension Stack.Small where Element: ~Copyable {
         guard _count > 0 else {
             return nil
         }
-
-        if let heapPtr = unsafe _heapPtr {
-            return try unsafe body((heapPtr + _count - 1).pointee)
-        } else {
-            let topIndex = Stack<Element>.Index(Ordinal(UInt(_count - 1)))
-            return try unsafe body(_inline.read(at: topIndex).pointee)
-        }
+        return try body(span[_count - 1])
     }
 }
 
@@ -181,13 +175,7 @@ extension Stack.Small where Element: Copyable {
         guard _count > 0 else {
             return nil
         }
-
-        if let heapPtr = unsafe _heapPtr {
-            return unsafe (heapPtr + _count - 1).pointee
-        } else {
-            let topIndex = Stack<Element>.Index(Ordinal(UInt(_count - 1)))
-            return unsafe _inline.read(at: topIndex).pointee
-        }
+        return span[_count - 1]
     }
 }
 
@@ -203,8 +191,7 @@ extension Stack.Small where Element: ~Copyable {
             if let heapPtr = unsafe _heapPtr {
                 yield unsafe Span(_unsafeStart: heapPtr, count: _count)
             } else {
-                let basePtr = unsafe _inline.read(at: .zero).base
-                yield unsafe Span(_unsafeStart: basePtr, count: _count)
+                yield _inline[count: Stack<Element>.Index.Count(UInt(_count))]
             }
         }
     }
@@ -214,14 +201,6 @@ extension Stack.Small where Element: ~Copyable {
     /// Elements are ordered from bottom (index 0) to top (index count-1).
     @inlinable
     public var mutableSpan: MutableSpan<Element> {
-        _read {
-            if let heapPtr = unsafe _heapPtr {
-                yield unsafe MutableSpan(_unsafeStart: heapPtr, count: _count)
-            } else {
-                let ptr = unsafe UnsafeMutablePointer(mutating: _inline.read(at: .zero).base)
-                yield unsafe MutableSpan(_unsafeStart: ptr, count: _count)
-            }
-        }
         _modify {
             if let heapPtr = unsafe _heapPtr {
                 var s = unsafe MutableSpan(_unsafeStart: heapPtr, count: _count)
@@ -252,15 +231,9 @@ extension Stack.Small where Element: ~Copyable {
     public func forEach<E: Swift.Error>(
         _ body: (borrowing Element) throws(E) -> Void
     ) throws(E) {
-        if let heapPtr = unsafe _heapPtr {
-            for i in 0..<_count {
-                try unsafe body((heapPtr + i).pointee)
-            }
-        } else {
-            for i in 0..<_count {
-                let index = Stack<Element>.Index(Ordinal(UInt(i)))
-                try unsafe body(_inline.read(at: index).pointee)
-            }
+        let s = span
+        for i in 0..<_count {
+            try body(s[i])
         }
     }
 }

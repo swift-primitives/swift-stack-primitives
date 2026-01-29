@@ -92,8 +92,7 @@ extension Stack.Inline where Element: ~Copyable {
         guard _count > 0 else {
             return nil
         }
-        let topIndex = Stack<Element>.Index(Ordinal(UInt(_count - 1)))
-        return try unsafe body(_storage.read(at: topIndex).pointee)
+        return try body(span[_count - 1])
     }
 }
 
@@ -110,8 +109,7 @@ extension Stack.Inline where Element: Copyable {
         guard _count > 0 else {
             return nil
         }
-        let topIndex = Stack<Element>.Index(Ordinal(UInt(_count - 1)))
-        return unsafe _storage.read(at: topIndex).pointee
+        return span[_count - 1]
     }
 }
 
@@ -121,53 +119,24 @@ extension Stack.Inline where Element: ~Copyable {
     /// Read-only span of the stack elements.
     ///
     /// Elements are ordered from bottom (index 0) to top (index count-1).
-    /// The span views the initialized prefix of the storage.
     ///
-    /// ## Layout Guarantee
-    ///
-    /// Elements are stored contiguously at stride intervals:
-    /// - Element i is at `base + i * stride(Element)`
-    /// - This matches standard array layout
-    /// - The span correctly views all initialized elements
-    ///
-    /// ## Lifetime Contract
-    ///
-    /// - The span is valid ONLY for the duration of the access.
-    /// - The span MUST NOT be stored, returned, or allowed to escape.
-    /// - The `_read` accessor enforces proper lifetime scoping.
+    /// The span is valid only for the duration of the access, enforced by
+    /// the `_read` accessor's coroutine semantics.
     @inlinable
     public var span: Span<Element> {
         _read {
-            let basePtr = unsafe _storage.read(at: .zero).base
-            yield unsafe Span(_unsafeStart: basePtr, count: _count)
+            yield _storage[count: Stack<Element>.Index.Count(UInt(_count))]
         }
     }
 
     /// Mutable span of the stack elements.
     ///
     /// Elements are ordered from bottom (index 0) to top (index count-1).
-    /// The span views the initialized prefix of the storage.
     ///
-    /// ## Layout Guarantee
-    ///
-    /// Elements are stored contiguously at stride intervals:
-    /// - Element i is at `base + i * stride(Element)`
-    /// - This matches standard array layout
-    /// - The span correctly views all initialized elements
-    ///
-    /// ## Lifetime Contract
-    ///
-    /// - The span is valid ONLY for the duration of the access.
-    /// - The span MUST NOT be stored, returned, or allowed to escape.
-    /// - The `_read`/`_modify` accessors enforce proper lifetime scoping.
+    /// The span is valid only for the duration of the access, enforced by
+    /// the `_modify` accessor's coroutine semantics.
     @inlinable
     public var mutableSpan: MutableSpan<Element> {
-        _read {
-            // For _read, we provide read-only access through the span.
-            // Using mutating cast is safe here because _read doesn't allow mutation.
-            let ptr = unsafe UnsafeMutablePointer(mutating: _storage.read(at: .zero).base)
-            yield unsafe MutableSpan(_unsafeStart: ptr, count: _count)
-        }
         _modify {
             var s = unsafe MutableSpan(_unsafeStart: _storage.pointer(at: .zero).base, count: _count)
             yield &s
@@ -199,9 +168,9 @@ extension Stack.Inline where Element: ~Copyable {
     public func forEach<E: Swift.Error>(
         _ body: (borrowing Element) throws(E) -> Void
     ) throws(E) {
+        let s = span
         for i in 0..<_count {
-            let index = Stack<Element>.Index(Ordinal(UInt(i)))
-            try unsafe body(_storage.read(at: index).pointee)
+            try body(s[i])
         }
     }
 }

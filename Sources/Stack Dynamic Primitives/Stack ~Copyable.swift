@@ -124,8 +124,7 @@ extension Stack where Element: ~Copyable {
         guard _storage.count > .zero else {
             return nil
         }
-        let topIndex = Index(Ordinal(UInt(Int(bitPattern: _storage.count) - 1)))  // Safe: count > 0
-        return body(unsafe _storage.read(at: topIndex).pointee)
+        return body(unsafe _cachedPtr[Int(bitPattern: _storage.count) - 1])
     }
 }
 

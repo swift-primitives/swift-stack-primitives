@@ -66,7 +66,7 @@ extension Stack.Inline where Element: ~Copyable {
     public subscript(index: Stack<Element>.Index) -> Element {
         _read {
             precondition(index >= .zero && Int(bitPattern: index) < _count, "Index out of bounds")
-            yield unsafe _storage.read(at: index).pointee
+            yield span[Int(bitPattern: index)]
         }
         _modify {
             precondition(index >= .zero && Int(bitPattern: index) < _count, "Index out of bounds")
@@ -85,7 +85,7 @@ extension Stack where Element: Copyable {
     @inlinable
     public func element(at index: Index) -> Element? {
         guard index >= .zero && Int(bitPattern: index) < Int(bitPattern: _storage.count) else { return nil }
-        return unsafe _storage.read(at: index).pointee
+        return unsafe _cachedPtr[Int(bitPattern: index)]
     }
 }
 

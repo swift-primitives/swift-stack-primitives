@@ -95,8 +95,7 @@ extension Stack {
         guard _storage.count > .zero else {
             return nil
         }
-        let topIndex = Index(Ordinal(UInt(Int(bitPattern: _storage.count) - 1)))  // Safe: count > 0
-        return unsafe _storage.read(at: topIndex).pointee
+        return unsafe _cachedPtr[Int(bitPattern: _storage.count) - 1]
     }
 }
 
@@ -130,23 +129,27 @@ extension Stack: Swift.Sequence where Element: Copyable {
     /// An iterator over the elements of a stack.
     public struct Iterator: IteratorProtocol {
         @usableFromInline
-        let _storage: Storage<Element>
+        let _basePtr: UnsafePointer<Element>
+
+        @usableFromInline
+        let _count: Stack<Element>.Index.Count
 
         @usableFromInline
         var _index: Stack<Element>.Index = .zero
 
         @usableFromInline
-        init(storage: Storage<Element>) {
-            self._storage = storage
+        init(basePtr: UnsafePointer<Element>, count: Stack<Element>.Index.Count) {
+            self._basePtr = basePtr
+            self._count = count
         }
 
         /// Advances to the next element and returns it, or nil if no next element exists.
         @inlinable
         public mutating func next() -> Element? {
-            guard _index < Index(_storage.count) else { return nil }
-            let currentIndex = _index
+            guard _index < Index(_count) else { return nil }
+            let result = unsafe _basePtr[Int(bitPattern: _index)]
             _index = _index + .one
-            return unsafe _storage.read(at: currentIndex).pointee
+            return result
         }
     }
 
@@ -155,10 +158,10 @@ extension Stack: Swift.Sequence where Element: Copyable {
     /// Elements are yielded from bottom (oldest) to top (newest).
     @inlinable
     public borrowing func makeIterator() -> Iterator {
-        Iterator(storage: _storage)
+        Iterator(basePtr: _cachedPtr, count: _storage.count)
     }
 
-    /// The underestimated count for `Sequence` conformance.
+    /// The underestimatedCount for `Sequence` conformance.
     @inlinable
     public var underestimatedCount: Int { Int(bitPattern: _storage.count) }
 }

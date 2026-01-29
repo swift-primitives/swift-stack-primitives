@@ -25,23 +25,27 @@ extension Stack.Bounded: Swift.Sequence where Element: Copyable {
     /// An iterator over the elements of a bounded stack.
     public struct Iterator: IteratorProtocol {
         @usableFromInline
-        let _storage: Storage<Element>
+        let _basePtr: UnsafePointer<Element>
+
+        @usableFromInline
+        let _count: Stack<Element>.Index.Count
 
         @usableFromInline
         var _index: Stack<Element>.Index = .zero
 
         @usableFromInline
-        init(storage: Storage<Element>) {
-            self._storage = storage
+        init(basePtr: UnsafePointer<Element>, count: Stack<Element>.Index.Count) {
+            self._basePtr = basePtr
+            self._count = count
         }
 
         /// Advances to the next element and returns it, or nil if no next element exists.
         @inlinable
         public mutating func next() -> Element? {
-            guard _index < Stack<Element>.Index(_storage.count) else { return nil }
-            let currentIndex = _index
+            guard _index < Stack<Element>.Index(_count) else { return nil }
+            let result = unsafe _basePtr[Int(bitPattern: _index)]
             _index = _index + .one
-            return unsafe _storage.read(at: currentIndex).pointee
+            return result
         }
     }
 
@@ -50,7 +54,7 @@ extension Stack.Bounded: Swift.Sequence where Element: Copyable {
     /// Elements are yielded from bottom (oldest) to top (newest).
     @inlinable
     public borrowing func makeIterator() -> Iterator {
-        Iterator(storage: _storage)
+        Iterator(basePtr: _cachedPtr, count: _storage.count)
     }
 
     /// The underestimated count for `Sequence` conformance.
