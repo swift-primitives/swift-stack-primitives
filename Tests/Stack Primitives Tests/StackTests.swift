@@ -544,34 +544,33 @@ struct StackInlineTests {
         #expect(stack.isFull == true)
     }
 
-    @Test("span provides read-only indexed access")
-    func spanProvidesReadOnlyIndexedAccess() throws {
+    @Test("withElement provides read-only indexed access")
+    func withElementProvidesReadOnlyIndexedAccess() throws {
         var stack = try Stack<Int>.Inline<4>()
         try stack.push(1)
         try stack.push(2)
         try stack.push(3)
 
         // Index 0 is bottom, index 2 is top
-        let s = stack.span
-        let bottom = s[0]
-        let middle = s[1]
-        let top = s[2]
+        let bottom = stack.withElement(at: 0) { $0 }
+        let middle = stack.withElement(at: 1) { $0 }
+        let top = stack.withElement(at: 2) { $0 }
 
         #expect(bottom == 1)
         #expect(middle == 2)
         #expect(top == 3)
     }
 
-    @Test("mutableSpan provides mutable indexed access")
-    func mutableSpanProvidesMutableIndexedAccess() throws {
+    @Test("withMutableElement provides mutable indexed access")
+    func withMutableElementProvidesMutableIndexedAccess() throws {
         var stack = try Stack<Int>.Inline<4>()
         try stack.push(1)
         try stack.push(2)
         try stack.push(3)
 
-        stack.mutableSpan[0] = 10
-        stack.mutableSpan[1] = 20
-        stack.mutableSpan[2] = 30
+        stack.withMutableElement(at: 0) { $0 = 10 }
+        stack.withMutableElement(at: 1) { $0 = 20 }
+        stack.withMutableElement(at: 2) { $0 = 30 }
 
         #expect(stack.pop() == 30)
         #expect(stack.pop() == 20)
@@ -847,17 +846,17 @@ struct StackInlineStressTests {
         #expect(stack.isEmpty == true)
     }
 
-    @Test("mutableSpan modification stress test")
-    func mutableSpanModificationStress() throws {
+    @Test("withMutableElement modification stress test")
+    func withMutableElementModificationStress() throws {
         var stack = try Stack<Int>.Inline<16>()
 
         for i in 0..<16 {
             try stack.push(i)
         }
 
-        // Modify all elements via mutableSpan
+        // Modify all elements via withMutableElement
         for i in 0..<16 {
-            stack.mutableSpan[i] = stack.mutableSpan[i] * 2
+            stack.withMutableElement(at: i) { $0 = $0 * 2 }
         }
 
         // Verify modifications in LIFO order
@@ -1049,26 +1048,32 @@ struct StackSmallTests {
         #expect(stack.pop() == 1)
     }
 
-    @Test("Span access from inline storage")
-    func spanAccessFromInlineStorage() throws {
+    @Test("Element access from inline storage")
+    func elementAccessFromInlineStorage() throws {
         var stack = try Stack<Int>.Small<4>()
         stack.push(1)
         stack.push(2)
         stack.push(3)
 
-        #expect(stack.span.count == 3)
+        #expect(stack.count == 3)
         // Elements are bottom to top: 1, 2, 3
+        #expect(stack.withElement(at: 0) { $0 } == 1)
+        #expect(stack.withElement(at: 1) { $0 } == 2)
+        #expect(stack.withElement(at: 2) { $0 } == 3)
     }
 
-    @Test("Span access from heap storage")
-    func spanAccessFromHeapStorage() throws {
+    @Test("Element access from heap storage")
+    func elementAccessFromHeapStorage() throws {
         var stack = try Stack<Int>.Small<2>()
         stack.push(1)
         stack.push(2)
         stack.push(3)
 
         #expect(stack.isSpilled == true)
-        #expect(stack.span.count == 3)
+        #expect(stack.count == 3)
+        #expect(stack.withElement(at: 0) { $0 } == 1)
+        #expect(stack.withElement(at: 1) { $0 } == 2)
+        #expect(stack.withElement(at: 2) { $0 } == 3)
     }
 
     @Test("ForEach iteration")

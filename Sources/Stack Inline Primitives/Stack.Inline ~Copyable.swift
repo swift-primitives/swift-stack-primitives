@@ -92,7 +92,8 @@ extension Stack.Inline where Element: ~Copyable {
         guard _count > 0 else {
             return nil
         }
-        return try body(span[_count - 1])
+        let topIndex = Stack<Element>.Index(Ordinal(UInt(_count - 1)))
+        return try _storage.withElement(at: topIndex, body)
     }
 }
 
@@ -109,42 +110,51 @@ extension Stack.Inline where Element: Copyable {
         guard _count > 0 else {
             return nil
         }
-        return span[_count - 1]
+        let topIndex = Stack<Element>.Index(Ordinal(UInt(_count - 1)))
+        return _storage.withElement(at: topIndex) { $0 }
     }
 }
 
-// MARK: - Span Access
+// MARK: - Element Access
+//
+// Storage.Inline uses 64-byte slots, which is incompatible with Span's dense
+// layout. Provide indexed element access instead of Span-based bulk access.
 
 extension Stack.Inline where Element: ~Copyable {
-    /// Read-only span of the stack elements.
+    /// Provides access to the element at the given index via closure.
     ///
-    /// Elements are ordered from bottom (index 0) to top (index count-1).
-    ///
-    /// The span is valid only for the duration of the access, enforced by
-    /// the `_read` accessor's coroutine semantics.
+    /// - Parameters:
+    ///   - index: The index of the element (0 = bottom, count-1 = top).
+    ///   - body: A closure that receives a borrowed reference to the element.
+    /// - Returns: The value returned by the closure.
+    /// - Precondition: `index` must be in `0..<count`.
     @inlinable
-    public var span: Span<Element> {
-        _read {
-            yield _storage[count: Stack<Element>.Index.Count(UInt(_count))]
-        }
+    public func withElement<R, E: Swift.Error>(
+        at index: Int,
+        _ body: (borrowing Element) throws(E) -> R
+    ) throws(E) -> R {
+        precondition(index >= 0 && index < _count, "Index out of bounds")
+        let typedIndex = Stack<Element>.Index(Ordinal(UInt(index)))
+        return try _storage.withElement(at: typedIndex, body)
     }
 
-    /// Mutable span of the stack elements.
+    /// Provides mutable access to the element at the given index via closure.
     ///
-    /// Elements are ordered from bottom (index 0) to top (index count-1).
-    ///
-    /// The span is valid only for the duration of the access, enforced by
-    /// the `_modify` accessor's coroutine semantics.
+    /// - Parameters:
+    ///   - index: The index of the element (0 = bottom, count-1 = top).
+    ///   - body: A closure that receives a mutable reference to the element.
+    /// - Returns: The value returned by the closure.
+    /// - Precondition: `index` must be in `0..<count`.
     @inlinable
-    public var mutableSpan: MutableSpan<Element> {
-        _modify {
-            var s = unsafe MutableSpan(_unsafeStart: _storage.pointer(at: .zero).base, count: _count)
-            yield &s
-        }
+    public mutating func withMutableElement<R, E: Swift.Error>(
+        at index: Int,
+        _ body: (inout Element) throws(E) -> R
+    ) throws(E) -> R {
+        precondition(index >= 0 && index < _count, "Index out of bounds")
+        let typedIndex = Stack<Element>.Index(Ordinal(UInt(index)))
+        return try _storage.withMutableElement(at: typedIndex, body)
     }
 }
-
-
 
 // MARK: - Sendable
 
@@ -168,10 +178,7 @@ extension Stack.Inline where Element: ~Copyable {
     public func forEach<E: Swift.Error>(
         _ body: (borrowing Element) throws(E) -> Void
     ) throws(E) {
-        let s = span
-        for i in 0..<_count {
-            try body(s[i])
-        }
+        try _storage.forEach(count: Stack<Element>.Index.Count(UInt(_count)), body)
     }
 }
 
@@ -197,4 +204,3 @@ extension Stack.Inline where Element: ~Copyable {
         _count = targetCount
     }
 }
-

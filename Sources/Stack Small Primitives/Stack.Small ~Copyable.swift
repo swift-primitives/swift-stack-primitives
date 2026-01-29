@@ -158,7 +158,27 @@ extension Stack.Small where Element: ~Copyable {
         guard _count > 0 else {
             return nil
         }
-        return try body(span[_count - 1])
+        if let heap = _heap {
+            // Heap storage: use Span (dense packing)
+            var thrown: E? = nil
+            let result: R? = unsafe heap.withUnsafeMutablePointerToElements { base in
+                let span = unsafe Span(_unsafeStart: UnsafePointer(base), count: _count)
+                do {
+                    return try body(span[_count - 1])
+                } catch let e as E {
+                    thrown = e
+                    return nil
+                } catch {
+                    preconditionFailure("unexpected error type")
+                }
+            }
+            if let thrown { throw thrown }
+            return result!
+        } else {
+            // Inline storage: use indexed access (64-byte slots)
+            let topIndex = Stack<Element>.Index(Ordinal(UInt(_count - 1)))
+            return try _inline.withElement(at: topIndex, body)
+        }
     }
 }
 
@@ -175,40 +195,92 @@ extension Stack.Small where Element: Copyable {
         guard _count > 0 else {
             return nil
         }
-        return span[_count - 1]
+        if let heap = _heap {
+            return unsafe heap.withUnsafeMutablePointerToElements { base in
+                let span = unsafe Span(_unsafeStart: UnsafePointer(base), count: _count)
+                return span[_count - 1]
+            }
+        } else {
+            let topIndex = Stack<Element>.Index(Ordinal(UInt(_count - 1)))
+            return _inline.withElement(at: topIndex) { $0 }
+        }
     }
 }
 
-// MARK: - Span Access
+// MARK: - Element Access
+//
+// Stack.Small has asymmetric storage:
+// - Heap storage: Dense packing, Span works
+// - Inline storage: 64-byte slots, Span doesn't work
+//
+// Provide withSpan only for heap path. For inline, use indexed access.
 
 extension Stack.Small where Element: ~Copyable {
-    /// Read-only span of the stack elements.
+    /// Provides access to the element at the given index via closure.
     ///
-    /// Elements are ordered from bottom (index 0) to top (index count-1).
+    /// - Parameters:
+    ///   - index: The index of the element (0 = bottom, count-1 = top).
+    ///   - body: A closure that receives a borrowed reference to the element.
+    /// - Returns: The value returned by the closure.
+    /// - Precondition: `index` must be in `0..<count`.
     @inlinable
-    public var span: Span<Element> {
-        _read {
-            if let heapPtr = unsafe _heapPtr {
-                yield unsafe Span(_unsafeStart: heapPtr, count: _count)
-            } else {
-                yield _inline[count: Stack<Element>.Index.Count(UInt(_count))]
+    public func withElement<R, E: Swift.Error>(
+        at index: Int,
+        _ body: (borrowing Element) throws(E) -> R
+    ) throws(E) -> R {
+        precondition(index >= 0 && index < _count, "Index out of bounds")
+        if let heap = _heap {
+            var thrown: E? = nil
+            let result: R? = unsafe heap.withUnsafeMutablePointerToElements { base in
+                let span = unsafe Span(_unsafeStart: UnsafePointer(base), count: _count)
+                do {
+                    return try body(span[index])
+                } catch let e as E {
+                    thrown = e
+                    return nil
+                } catch {
+                    preconditionFailure("unexpected error type")
+                }
             }
+            if let thrown { throw thrown }
+            return result!
+        } else {
+            let typedIndex = Stack<Element>.Index(Ordinal(UInt(index)))
+            return try _inline.withElement(at: typedIndex, body)
         }
     }
 
-    /// Mutable span of the stack elements.
+    /// Provides mutable access to the element at the given index via closure.
     ///
-    /// Elements are ordered from bottom (index 0) to top (index count-1).
+    /// - Parameters:
+    ///   - index: The index of the element (0 = bottom, count-1 = top).
+    ///   - body: A closure that receives a mutable reference to the element.
+    /// - Returns: The value returned by the closure.
+    /// - Precondition: `index` must be in `0..<count`.
     @inlinable
-    public var mutableSpan: MutableSpan<Element> {
-        _modify {
-            if let heapPtr = unsafe _heapPtr {
-                var s = unsafe MutableSpan(_unsafeStart: heapPtr, count: _count)
-                yield &s
-            } else {
-                var s = unsafe MutableSpan(_unsafeStart: _inline.pointer(at: .zero).base, count: _count)
-                yield &s
+    public mutating func withMutableElement<R, E: Swift.Error>(
+        at index: Int,
+        _ body: (inout Element) throws(E) -> R
+    ) throws(E) -> R {
+        precondition(index >= 0 && index < _count, "Index out of bounds")
+        if let heap = _heap {
+            var thrown: E? = nil
+            let result: R? = unsafe heap.withUnsafeMutablePointerToElements { base in
+                var span = unsafe MutableSpan(_unsafeStart: base, count: _count)
+                do {
+                    return try body(&span[index])
+                } catch let e as E {
+                    thrown = e
+                    return nil
+                } catch {
+                    preconditionFailure("unexpected error type")
+                }
             }
+            if let thrown { throw thrown }
+            return result!
+        } else {
+            let typedIndex = Stack<Element>.Index(Ordinal(UInt(index)))
+            return try _inline.withMutableElement(at: typedIndex, body)
         }
     }
 }
@@ -231,9 +303,25 @@ extension Stack.Small where Element: ~Copyable {
     public func forEach<E: Swift.Error>(
         _ body: (borrowing Element) throws(E) -> Void
     ) throws(E) {
-        let s = span
-        for i in 0..<_count {
-            try body(s[i])
+        if let heap = _heap {
+            // Heap storage: use Span (dense packing)
+            var thrown: E? = nil
+            unsafe heap.withUnsafeMutablePointerToElements { base in
+                let span = unsafe Span(_unsafeStart: UnsafePointer(base), count: _count)
+                do {
+                    for i in 0..<_count {
+                        try body(span[i])
+                    }
+                } catch let e as E {
+                    thrown = e
+                } catch {
+                    preconditionFailure("unexpected error type")
+                }
+            }
+            if let thrown { throw thrown }
+        } else {
+            // Inline storage: use storage's forEach (respects 64-byte slots)
+            try _inline.forEach(count: Stack<Element>.Index.Count(UInt(_count)), body)
         }
     }
 }

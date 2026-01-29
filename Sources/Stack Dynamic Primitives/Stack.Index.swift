@@ -57,21 +57,55 @@ extension Stack where Element: Copyable {
 
 // MARK: - Typed Subscript (Stack.Inline)
 
-extension Stack.Inline where Element: ~Copyable {
+extension Stack.Inline where Element: Copyable {
     /// Accesses the element at the given typed index.
     ///
     /// - Parameter index: The typed index of the element to access (0 = bottom).
     /// - Precondition: `index.position` must be in `0..<count`.
     @inlinable
     public subscript(index: Stack<Element>.Index) -> Element {
-        _read {
+        get {
             precondition(index >= .zero && Int(bitPattern: index) < _count, "Index out of bounds")
-            yield span[Int(bitPattern: index)]
+            return _storage.withElement(at: index) { $0 }
         }
         _modify {
             precondition(index >= .zero && Int(bitPattern: index) < _count, "Index out of bounds")
-            yield unsafe &_storage.pointer(at: index).pointee
+            yield &_storage.pointer(at: index).pointee
         }
+    }
+}
+
+extension Stack.Inline where Element: ~Copyable {
+    /// Provides access to the element at the given typed index via closure.
+    ///
+    /// - Parameters:
+    ///   - index: The typed index of the element to access (0 = bottom).
+    ///   - body: A closure that receives the element.
+    /// - Returns: The value returned by the closure.
+    /// - Precondition: `index.position` must be in `0..<count`.
+    @inlinable
+    public func withElement<R>(
+        at index: Stack<Element>.Index,
+        _ body: (borrowing Element) -> R
+    ) -> R {
+        precondition(index >= .zero && Int(bitPattern: index) < _count, "Index out of bounds")
+        return _storage.withElement(at: index, body)
+    }
+
+    /// Provides mutable access to the element at the given typed index via closure.
+    ///
+    /// - Parameters:
+    ///   - index: The typed index of the element to access (0 = bottom).
+    ///   - body: A closure that receives a mutable reference to the element.
+    /// - Returns: The value returned by the closure.
+    /// - Precondition: `index.position` must be in `0..<count`.
+    @inlinable
+    public mutating func withMutableElement<R>(
+        at index: Stack<Element>.Index,
+        _ body: (inout Element) -> R
+    ) -> R {
+        precondition(index >= .zero && Int(bitPattern: index) < _count, "Index out of bounds")
+        return _storage.withMutableElement(at: index, body)
     }
 }
 
