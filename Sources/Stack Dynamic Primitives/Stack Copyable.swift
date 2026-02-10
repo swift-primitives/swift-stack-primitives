@@ -10,21 +10,11 @@
 // ===----------------------------------------------------------------------===//
 
 public import Stack_Primitives_Core
-public import Index_Primitives
-public import Range_Primitives
+public import Buffer_Linear_Primitives
 
 // MARK: - Copy-on-Write (Copyable elements only)
 
 extension Stack where Element: Copyable {
-    /// Ensures the storage is uniquely referenced before mutation.
-    @usableFromInline
-    mutating func makeUnique() {
-        if !isKnownUniquelyReferenced(&_storage) {
-            _storage = _storage.copy()
-            unsafe (_cachedPtr = _storage.pointer(at: .zero).base)  // CRITICAL: Update cached pointer
-        }
-    }
-
     /// Pushes an element onto the stack (CoW-aware).
     ///
     /// This method shadows the base `push(_:)` when `Element: Copyable`,
@@ -34,12 +24,7 @@ extension Stack where Element: Copyable {
     /// - Complexity: O(1) amortized, O(n) if copy triggered
     @inlinable
     public mutating func push(_ element: Element) {
-        makeUnique()
-        let currentCount = Int(bitPattern: _storage.count)
-        ensureCapacity(currentCount + 1)
-        let index = Index(_storage.count)
-        _storage.initialize(to: element, at: index)
-        _storage.count = _storage.count + .one
+        _buffer.append(element)
     }
 
     /// Pops and returns the top element, or nil if empty (CoW-aware).
@@ -51,12 +36,10 @@ extension Stack where Element: Copyable {
     /// - Complexity: O(1), O(n) if copy triggered
     @inlinable
     public mutating func pop() -> Element? {
-        makeUnique()
-        guard _storage.count > .zero else {
+        guard !_buffer.isEmpty else {
             return nil
         }
-        _storage.count = try! _storage.count.subtract.exact(.one)  // Safe: count > 0
-        return _storage.move(at: Index(_storage.count))
+        return _buffer.removeLast()
     }
 
     /// Removes all elements from the stack (CoW-aware).
@@ -66,16 +49,10 @@ extension Stack where Element: Copyable {
     /// - Complexity: O(n) where n is the number of elements.
     @inlinable
     public mutating func clear(keepingCapacity: Bool = true) {
-        makeUnique()
-        let count = _storage.count
-        if count > .zero {
-            _storage.deinitialize(count: count)
-        }
-        _storage.count = .zero
+        _buffer.removeAll()
 
         if !keepingCapacity {
-            _storage = Storage<Element>.create(minimumCapacity: .zero)
-            unsafe (_cachedPtr = _storage.pointer(at: .zero).base)  // Update cached pointer
+            _buffer = Buffer<Element>.Linear(minimumCapacity: .zero)
         }
     }
 }
@@ -92,10 +69,11 @@ extension Stack {
     /// - Complexity: O(1)
     @inlinable
     public func peek() -> Element? {
-        guard _storage.count > .zero else {
+        guard !_buffer.isEmpty else {
             return nil
         }
-        return unsafe _cachedPtr[Int(bitPattern: _storage.count) - 1]
+        let topIndex = _buffer.count.subtract.saturating(.one).map(Ordinal.init)
+        return _buffer[topIndex]
     }
 }
 
@@ -112,8 +90,7 @@ extension Stack where Element: Copyable {
         @_lifetime(&self)
         @inlinable
         mutating get {
-            makeUnique()
-            return unsafe MutableSpan(_unsafeStart: _cachedPtr, count: Int(bitPattern: _storage.count))
+            _buffer.mutableSpan
         }
     }
 }
@@ -129,26 +106,23 @@ extension Stack: Swift.Sequence where Element: Copyable {
     /// An iterator over the elements of a stack.
     public struct Iterator: IteratorProtocol {
         @usableFromInline
-        let _basePtr: UnsafePointer<Element>
+        var _elements: [Element]
 
         @usableFromInline
-        let _count: Stack<Element>.Index.Count
+        var _position: Int
 
         @usableFromInline
-        var _index: Stack<Element>.Index = .zero
-
-        @usableFromInline
-        init(basePtr: UnsafePointer<Element>, count: Stack<Element>.Index.Count) {
-            self._basePtr = basePtr
-            self._count = count
+        init(elements: [Element]) {
+            self._elements = elements
+            self._position = 0
         }
 
         /// Advances to the next element and returns it, or nil if no next element exists.
         @inlinable
         public mutating func next() -> Element? {
-            guard _index < Index(_count) else { return nil }
-            let result = unsafe _basePtr[Int(bitPattern: _index)]
-            _index = _index + .one
+            guard _position < _elements.count else { return nil }
+            let result = _elements[_position]
+            _position += 1
             return result
         }
     }
@@ -158,12 +132,21 @@ extension Stack: Swift.Sequence where Element: Copyable {
     /// Elements are yielded from bottom (oldest) to top (newest).
     @inlinable
     public borrowing func makeIterator() -> Iterator {
-        Iterator(basePtr: _cachedPtr, count: _storage.count)
+        var elements: [Element] = []
+        elements.reserveCapacity(Int(bitPattern: _buffer.count))
+
+        var idx: Index = .zero
+        let end = _buffer.count.map(Ordinal.init)
+        while idx < end {
+            elements.append(_buffer[idx])
+            idx += .one
+        }
+        return Iterator(elements: elements)
     }
 
     /// The underestimatedCount for `Sequence` conformance.
     @inlinable
-    public var underestimatedCount: Int { Int(bitPattern: _storage.count) }
+    public var underestimatedCount: Int { Int(bitPattern: _buffer.count) }
 }
 
 // MARK: - CoW-aware Capacity Management (Copyable elements)
@@ -176,21 +159,22 @@ extension Stack where Element: Copyable {
     /// - Complexity: O(n) where n is the number of elements.
     @inlinable
     public mutating func compact() {
-        makeUnique()
-        let currentCount = _storage.count
-        guard _storage.capacity > Int(bitPattern: currentCount) else { return }
+        let currentCount = _buffer.count
+        guard _buffer.capacity > currentCount else { return }
 
         if currentCount == .zero {
-            _storage = Storage<Element>.create(minimumCapacity: .zero)
-            unsafe (_cachedPtr = _storage.pointer(at: .zero).base)  // Update cached pointer
+            _buffer = Buffer<Element>.Linear(minimumCapacity: .zero)
             return
         }
 
-        let newStorage = Storage<Element>.create(minimumCapacity: currentCount)
-        _storage.copy(to: newStorage)
-        newStorage.count = currentCount
-        _storage = newStorage
-        unsafe (_cachedPtr = _storage.pointer(at: .zero).base)  // Update cached pointer
+        var newBuffer = Buffer<Element>.Linear(minimumCapacity: currentCount)
+        var idx: Index = .zero
+        let end = currentCount.map(Ordinal.init)
+        while idx < end {
+            newBuffer.append(_buffer[idx])
+            idx += .one
+        }
+        _buffer = newBuffer
     }
 
     /// Removes elements beyond the specified count (CoW-aware).
@@ -202,15 +186,12 @@ extension Stack where Element: Copyable {
     /// - Complexity: O(k) where k is the number of removed elements.
     @inlinable
     public mutating func truncate(to newCount: Int) {
-        makeUnique()
-        let currentCount = Int(bitPattern: _storage.count)
+        let currentCount = Int(bitPattern: _buffer.count)
         guard newCount < currentCount else { return }
         let targetCount = Swift.max(0, newCount)
 
-        let startIdx = Index(Ordinal(UInt(targetCount)))
-        let endIdx = Index(Ordinal(UInt(currentCount)))
-        let range = Range.Lazy(startIdx..<endIdx)
-        _storage.deinitialize(in: range)
-        _storage.count = Index.Count(UInt(targetCount))
+        while Int(bitPattern: _buffer.count) > targetCount {
+            _ = _buffer.removeLast()
+        }
     }
 }

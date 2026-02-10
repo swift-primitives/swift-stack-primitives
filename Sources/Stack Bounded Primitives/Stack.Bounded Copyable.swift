@@ -10,9 +10,8 @@
 // ===----------------------------------------------------------------------===//
 
 public import Stack_Primitives_Core
-public import Collection_Primitives
-public import Sequence_Primitives
-public import Index_Primitives
+internal import Collection_Primitives
+internal import Sequence_Primitives
 
 // MARK: - Swift.Sequence Conformance
 
@@ -25,26 +24,23 @@ extension Stack.Bounded: Swift.Sequence where Element: Copyable {
     /// An iterator over the elements of a bounded stack.
     public struct Iterator: IteratorProtocol {
         @usableFromInline
-        let _basePtr: UnsafePointer<Element>
+        var _elements: [Element]
 
         @usableFromInline
-        let _count: Stack<Element>.Index.Count
+        var _position: Int
 
         @usableFromInline
-        var _index: Stack<Element>.Index = .zero
-
-        @usableFromInline
-        init(basePtr: UnsafePointer<Element>, count: Stack<Element>.Index.Count) {
-            self._basePtr = basePtr
-            self._count = count
+        init(elements: [Element]) {
+            self._elements = elements
+            self._position = 0
         }
 
         /// Advances to the next element and returns it, or nil if no next element exists.
         @inlinable
         public mutating func next() -> Element? {
-            guard _index < Stack<Element>.Index(_count) else { return nil }
-            let result = unsafe _basePtr[Int(bitPattern: _index)]
-            _index = _index + .one
+            guard _position < _elements.count else { return nil }
+            let result = _elements[_position]
+            _position += 1
             return result
         }
     }
@@ -54,10 +50,19 @@ extension Stack.Bounded: Swift.Sequence where Element: Copyable {
     /// Elements are yielded from bottom (oldest) to top (newest).
     @inlinable
     public borrowing func makeIterator() -> Iterator {
-        Iterator(basePtr: _cachedPtr, count: _storage.count)
+        var elements: [Element] = []
+        elements.reserveCapacity(Int(bitPattern: _buffer.count))
+
+        var idx: Stack<Element>.Index = .zero
+        let end = _buffer.count.map(Ordinal.init)
+        while idx < end {
+            elements.append(_buffer[idx])
+            idx += .one
+        }
+        return Iterator(elements: elements)
     }
 
     /// The underestimated count for `Sequence` conformance.
     @inlinable
-    public var underestimatedCount: Int { Int(bitPattern: _storage.count) }
+    public var underestimatedCount: Int { Int(bitPattern: _buffer.count) }
 }

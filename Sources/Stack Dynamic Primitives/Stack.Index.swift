@@ -10,7 +10,7 @@
 // ===----------------------------------------------------------------------===//
 
 public import Stack_Primitives_Core
-public import Index_Primitives
+internal import Index_Primitives
 
 // Note: Index typealias is defined in Stack Primitives Core/Stack.Index.swift
 
@@ -24,12 +24,12 @@ extension Stack where Element: ~Copyable {
     @inlinable
     public subscript(index: Index) -> Element {
         _read {
-            precondition(index >= .zero && Int(bitPattern: index) < Int(bitPattern: _storage.count), "Index out of bounds")
-            yield unsafe _cachedPtr[Int(bitPattern: index)]
+            precondition(index >= .zero && Int(bitPattern: index) < Int(bitPattern: _buffer.count), "Index out of bounds")
+            yield _buffer[index]
         }
         _modify {
-            precondition(index >= .zero && Int(bitPattern: index) < Int(bitPattern: _storage.count), "Index out of bounds")
-            yield unsafe &_cachedPtr[Int(bitPattern: index)]
+            precondition(index >= .zero && Int(bitPattern: index) < Int(bitPattern: _buffer.count), "Index out of bounds")
+            yield &_buffer[index]
         }
     }
 }
@@ -42,70 +42,35 @@ extension Stack where Element: Copyable {
     @inlinable
     public subscript(index: Index) -> Element {
         _read {
-            precondition(index >= .zero && Int(bitPattern: index) < Int(bitPattern: _storage.count), "Index out of bounds")
-            yield unsafe _cachedPtr[Int(bitPattern: index)]
+            precondition(index >= .zero && Int(bitPattern: index) < Int(bitPattern: _buffer.count), "Index out of bounds")
+            yield _buffer[index]
         }
         _modify {
-            makeUnique()
-            precondition(index >= .zero && Int(bitPattern: index) < Int(bitPattern: _storage.count), "Index out of bounds")
-            yield unsafe &_cachedPtr[Int(bitPattern: index)]
+            precondition(index >= .zero && Int(bitPattern: index) < Int(bitPattern: _buffer.count), "Index out of bounds")
+            yield &_buffer[index]
         }
     }
 }
 
 // Note: Stack.Bounded subscripts are in Stack Bounded Primitives/Stack.Bounded ~Copyable.swift
 
-// MARK: - Typed Subscript (Stack.Inline)
+// MARK: - Typed Subscript (Stack.Static)
 
-extension Stack.Inline where Element: Copyable {
+extension Stack.Static where Element: Copyable {
     /// Accesses the element at the given typed index.
     ///
     /// - Parameter index: The typed index of the element to access (0 = bottom).
     /// - Precondition: `index.position` must be in `0..<count`.
     @inlinable
     public subscript(index: Stack<Element>.Index) -> Element {
-        get {
-            precondition(index >= .zero && Int(bitPattern: index) < _count, "Index out of bounds")
-            return _storage.withElement(at: index) { $0 }
+        _read {
+            precondition(index >= .zero && Int(bitPattern: index) < Int(bitPattern: _buffer.count), "Index out of bounds")
+            yield _buffer[index]
         }
         _modify {
-            precondition(index >= .zero && Int(bitPattern: index) < _count, "Index out of bounds")
-            yield &_storage.pointer(at: index).pointee
+            precondition(index >= .zero && Int(bitPattern: index) < Int(bitPattern: _buffer.count), "Index out of bounds")
+            yield &_buffer[index]
         }
-    }
-}
-
-extension Stack.Inline where Element: ~Copyable {
-    /// Provides access to the element at the given typed index via closure.
-    ///
-    /// - Parameters:
-    ///   - index: The typed index of the element to access (0 = bottom).
-    ///   - body: A closure that receives the element.
-    /// - Returns: The value returned by the closure.
-    /// - Precondition: `index.position` must be in `0..<count`.
-    @inlinable
-    public func withElement<R>(
-        at index: Stack<Element>.Index,
-        _ body: (borrowing Element) -> R
-    ) -> R {
-        precondition(index >= .zero && Int(bitPattern: index) < _count, "Index out of bounds")
-        return _storage.withElement(at: index, body)
-    }
-
-    /// Provides mutable access to the element at the given typed index via closure.
-    ///
-    /// - Parameters:
-    ///   - index: The typed index of the element to access (0 = bottom).
-    ///   - body: A closure that receives a mutable reference to the element.
-    /// - Returns: The value returned by the closure.
-    /// - Precondition: `index.position` must be in `0..<count`.
-    @inlinable
-    public mutating func withMutableElement<R>(
-        at index: Stack<Element>.Index,
-        _ body: (inout Element) -> R
-    ) -> R {
-        precondition(index >= .zero && Int(bitPattern: index) < _count, "Index out of bounds")
-        return _storage.withMutableElement(at: index, body)
     }
 }
 
@@ -118,8 +83,8 @@ extension Stack where Element: Copyable {
     /// - Returns: The element at the index, or `nil` if out of bounds.
     @inlinable
     public func element(at index: Index) -> Element? {
-        guard index >= .zero && Int(bitPattern: index) < Int(bitPattern: _storage.count) else { return nil }
-        return unsafe _cachedPtr[Int(bitPattern: index)]
+        guard index >= .zero && Int(bitPattern: index) < Int(bitPattern: _buffer.count) else { return nil }
+        return _buffer[index]
     }
 }
 

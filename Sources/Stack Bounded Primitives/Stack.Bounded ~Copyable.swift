@@ -10,8 +10,7 @@
 // ===----------------------------------------------------------------------===//
 
 public import Stack_Primitives_Core
-public import Index_Primitives
-public import Range_Primitives
+public import Buffer_Linear_Primitives
 
 // Note: Conditional Copyable conformance is in Stack.swift (must be same file as declaration)
 
@@ -20,15 +19,19 @@ public import Range_Primitives
 extension Stack.Bounded where Element: ~Copyable {
     /// The current number of elements in the stack.
     @inlinable
-    public var count: Int { Int(bitPattern: _storage.count) }
+    public var count: Int { Int(bitPattern: _buffer.count) }
 
     /// Whether the stack is empty.
     @inlinable
-    public var isEmpty: Bool { _storage.count == .zero }
+    public var isEmpty: Bool { _buffer.isEmpty }
+
+    /// The requested capacity of the stack.
+    @inlinable
+    public var capacity: Int { requestedCapacity }
 
     /// Whether the stack is full.
     @inlinable
-    public var isFull: Bool { Int(bitPattern: _storage.count) == capacity }
+    public var isFull: Bool { Int(bitPattern: _buffer.count) >= requestedCapacity }
 }
 
 // MARK: - Core Operations (Base - for ~Copyable elements)
@@ -41,12 +44,15 @@ extension Stack.Bounded where Element: ~Copyable {
     /// - Complexity: O(1)
     @inlinable
     public mutating func push(_ element: consuming Element) throws(__StackBoundedError) {
-        guard Int(bitPattern: _storage.count) < capacity else {
+        guard Int(bitPattern: _buffer.count) < requestedCapacity else {
             throw .overflow
         }
-        let index = Index(_storage.count)
-        _storage.initialize(to: element, at: index)
-        _storage.count = _storage.count + .one
+        if let rejected = _buffer.append(element) {
+            // Buffer was full at the actual allocated capacity level — shouldn't happen
+            // if requestedCapacity <= actual capacity, but handle gracefully
+            _ = consume rejected
+            throw .overflow
+        }
     }
 
     /// Pops and returns the top element, or nil if empty.
@@ -55,11 +61,10 @@ extension Stack.Bounded where Element: ~Copyable {
     /// - Complexity: O(1)
     @inlinable
     public mutating func pop() -> Element? {
-        guard _storage.count > .zero else {
+        guard !_buffer.isEmpty else {
             return nil
         }
-        _storage.count = try! _storage.count.subtract.exact(.one)  // Safe: count > 0
-        return _storage.move(at: Index(_storage.count))
+        return _buffer.removeLast()
     }
 
     /// Removes all elements from the stack.
@@ -69,58 +74,40 @@ extension Stack.Bounded where Element: ~Copyable {
     /// - Complexity: O(n) where n is the number of elements.
     @inlinable
     public mutating func clear() {
-        let count = _storage.count
-        if count > .zero {
-            _storage.deinitialize(count: count)
+        while !_buffer.isEmpty {
+            _ = _buffer.removeLast()
         }
-        _storage.count = .zero
     }
 }
 
 // MARK: - Copy-on-Write (Copyable elements only)
 
 extension Stack.Bounded where Element: Copyable {
-    /// Ensures the storage is uniquely referenced before mutation.
-    @usableFromInline
-    mutating func makeUnique() {
-        if !isKnownUniquelyReferenced(&_storage) {
-            _storage = _storage.copy()
-            unsafe (_cachedPtr = _storage.pointer(at: .zero).base)  // CRITICAL: Update cached pointer
-        }
-    }
-
     /// Pushes an element onto the stack (CoW-aware).
     @inlinable
     public mutating func push(_ element: Element) throws(__StackBoundedError) {
-        makeUnique()
-        guard Int(bitPattern: _storage.count) < capacity else {
+        guard Int(bitPattern: _buffer.count) < requestedCapacity else {
             throw .overflow
         }
-        let index = Index(_storage.count)
-        _storage.initialize(to: element, at: index)
-        _storage.count = _storage.count + .one
+        if let rejected = _buffer.append(element) {
+            _ = rejected
+            throw .overflow
+        }
     }
 
     /// Pops and returns the top element, or nil if empty (CoW-aware).
     @inlinable
     public mutating func pop() -> Element? {
-        makeUnique()
-        guard _storage.count > .zero else {
+        guard !_buffer.isEmpty else {
             return nil
         }
-        _storage.count = try! _storage.count.subtract.exact(.one)  // Safe: count > 0
-        return _storage.move(at: Index(_storage.count))
+        return _buffer.removeLast()
     }
 
     /// Removes all elements from the stack (CoW-aware).
     @inlinable
     public mutating func clear() {
-        makeUnique()
-        let count = _storage.count
-        if count > .zero {
-            _storage.deinitialize(count: count)
-        }
-        _storage.count = .zero
+        _buffer.removeAll()
     }
 }
 
@@ -130,10 +117,11 @@ extension Stack.Bounded where Element: ~Copyable {
     /// Peeks at the top element without removing it.
     @inlinable
     public func peek<R>(_ body: (borrowing Element) -> R) -> R? {
-        guard _storage.count > .zero else {
+        guard !_buffer.isEmpty else {
             return nil
         }
-        return body(unsafe _cachedPtr[Int(bitPattern: _storage.count) - 1])
+        let topIndex = _buffer.count.subtract.saturating(.one).map(Ordinal.init)
+        return body(_buffer[topIndex])
     }
 }
 
@@ -141,10 +129,11 @@ extension Stack.Bounded where Element: Copyable {
     /// Returns the top element without removing it, or nil if empty.
     @inlinable
     public func peek() -> Element? {
-        guard _storage.count > .zero else {
+        guard !_buffer.isEmpty else {
             return nil
         }
-        return unsafe _cachedPtr[Int(bitPattern: _storage.count) - 1]
+        let topIndex = _buffer.count.subtract.saturating(.one).map(Ordinal.init)
+        return _buffer[topIndex]
     }
 }
 
@@ -156,7 +145,8 @@ extension Stack.Bounded where Element: ~Copyable {
         @_lifetime(borrow self)
         @inlinable
         borrowing get {
-            unsafe Span(_unsafeStart: _cachedPtr, count: Int(bitPattern: _storage.count))
+            let span = _buffer.span
+            return unsafe _overrideLifetime(span, borrowing: self)
         }
     }
 
@@ -165,7 +155,7 @@ extension Stack.Bounded where Element: ~Copyable {
         @_lifetime(&self)
         @inlinable
         mutating get {
-            unsafe MutableSpan(_unsafeStart: _cachedPtr, count: Int(bitPattern: _storage.count))
+            _buffer.mutableSpan
         }
     }
 }
@@ -178,37 +168,8 @@ extension Stack.Bounded where Element: Copyable {
         @_lifetime(&self)
         @inlinable
         mutating get {
-            makeUnique()
-            return unsafe MutableSpan(_unsafeStart: _cachedPtr, count: Int(bitPattern: _storage.count))
+            _buffer.mutableSpan
         }
-    }
-}
-
-// MARK: - Pointer Access (Escape Hatch)
-
-extension Stack.Bounded where Element: ~Copyable {
-    /// Provides read-only pointer access to the element at the specified index.
-    @_spi(Unsafe)
-    @unsafe
-    @inlinable
-    public func withUnsafePointer<R>(
-        at index: Stack<Element>.Index,
-        _ body: (UnsafePointer<Element>) -> R
-    ) -> R {
-        precondition(index >= .zero && index < Index(_storage.count))
-        return unsafe body(_cachedPtr + Int(bitPattern: index))
-    }
-
-    /// Provides mutable pointer access to the element at the specified index.
-    @_spi(Unsafe)
-    @unsafe
-    @inlinable
-    public mutating func withUnsafeMutablePointer<R>(
-        at index: Stack<Element>.Index,
-        _ body: (UnsafeMutablePointer<Element>) -> R
-    ) -> R {
-        precondition(index >= .zero && index < Index(_storage.count))
-        return unsafe body(_cachedPtr + Int(bitPattern: index))
     }
 }
 
@@ -222,9 +183,11 @@ extension Stack.Bounded where Element: ~Copyable {
     /// Calls the given closure for each element in the stack.
     @inlinable
     public func forEach(_ body: (borrowing Element) -> Void) {
-        let s = span
-        for i in 0..<Int(bitPattern: _storage.count) {
-            body(s[i])
+        var idx: Stack<Element>.Index = .zero
+        let end = _buffer.count.map(Ordinal.init)
+        while idx < end {
+            body(_buffer[idx])
+            idx += .one
         }
     }
 }
@@ -235,15 +198,13 @@ extension Stack.Bounded where Element: ~Copyable {
     /// Removes elements beyond the specified count.
     @inlinable
     public mutating func truncate(to newCount: Int) {
-        let currentCount = Int(bitPattern: _storage.count)
+        let currentCount = Int(bitPattern: _buffer.count)
         guard newCount < currentCount else { return }
         let targetCount = Swift.max(0, newCount)
 
-        let startIdx = Stack<Element>.Index(Ordinal(UInt(targetCount)))
-        let endIdx = Stack<Element>.Index(Ordinal(UInt(currentCount)))
-        let range = Range.Lazy(startIdx..<endIdx)
-        _storage.deinitialize(in: range)
-        _storage.count = Stack<Element>.Index.Count(UInt(targetCount))
+        while Int(bitPattern: _buffer.count) > targetCount {
+            _ = _buffer.removeLast()
+        }
     }
 }
 
@@ -253,16 +214,13 @@ extension Stack.Bounded where Element: Copyable {
     /// Removes elements beyond the specified count (CoW-aware).
     @inlinable
     public mutating func truncate(to newCount: Int) {
-        makeUnique()
-        let currentCount = Int(bitPattern: _storage.count)
+        let currentCount = Int(bitPattern: _buffer.count)
         guard newCount < currentCount else { return }
         let targetCount = Swift.max(0, newCount)
 
-        let startIdx = Stack<Element>.Index(Ordinal(UInt(targetCount)))
-        let endIdx = Stack<Element>.Index(Ordinal(UInt(currentCount)))
-        let range = Range.Lazy(startIdx..<endIdx)
-        _storage.deinitialize(in: range)
-        _storage.count = Stack<Element>.Index.Count(UInt(targetCount))
+        while Int(bitPattern: _buffer.count) > targetCount {
+            _ = _buffer.removeLast()
+        }
     }
 }
 
@@ -276,12 +234,12 @@ extension Stack.Bounded where Element: ~Copyable {
     @inlinable
     public subscript(index: Stack<Element>.Index) -> Element {
         _read {
-            precondition(index >= .zero && Int(bitPattern: index) < Int(bitPattern: _storage.count), "Index out of bounds")
-            yield unsafe _cachedPtr[Int(bitPattern: index)]
+            precondition(index >= .zero && Int(bitPattern: index) < Int(bitPattern: _buffer.count), "Index out of bounds")
+            yield _buffer[index]
         }
         _modify {
-            precondition(index >= .zero && Int(bitPattern: index) < Int(bitPattern: _storage.count), "Index out of bounds")
-            yield unsafe &_cachedPtr[Int(bitPattern: index)]
+            precondition(index >= .zero && Int(bitPattern: index) < Int(bitPattern: _buffer.count), "Index out of bounds")
+            yield &_buffer[index]
         }
     }
 }
@@ -294,13 +252,12 @@ extension Stack.Bounded where Element: Copyable {
     @inlinable
     public subscript(index: Stack<Element>.Index) -> Element {
         _read {
-            precondition(index >= .zero && Int(bitPattern: index) < Int(bitPattern: _storage.count), "Index out of bounds")
-            yield unsafe _cachedPtr[Int(bitPattern: index)]
+            precondition(index >= .zero && Int(bitPattern: index) < Int(bitPattern: _buffer.count), "Index out of bounds")
+            yield _buffer[index]
         }
         _modify {
-            makeUnique()
-            precondition(index >= .zero && Int(bitPattern: index) < Int(bitPattern: _storage.count), "Index out of bounds")
-            yield unsafe &_cachedPtr[Int(bitPattern: index)]
+            precondition(index >= .zero && Int(bitPattern: index) < Int(bitPattern: _buffer.count), "Index out of bounds")
+            yield &_buffer[index]
         }
     }
 }
@@ -314,9 +271,7 @@ extension Stack.Bounded where Element: Copyable {
     /// - Returns: The element at the index, or `nil` if out of bounds.
     @inlinable
     public func element(at index: Stack<Element>.Index) -> Element? {
-        guard index >= .zero && Int(bitPattern: index) < Int(bitPattern: _storage.count) else { return nil }
-        return unsafe _cachedPtr[Int(bitPattern: index)]
+        guard index >= .zero && Int(bitPattern: index) < Int(bitPattern: _buffer.count) else { return nil }
+        return _buffer[index]
     }
 }
-
-// Note: Swift.Sequence conformance for Stack.Bounded is in Stack.Bounded Copyable.swift

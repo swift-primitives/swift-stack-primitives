@@ -1,13 +1,15 @@
 // ===----------------------------------------------------------------------===//
 //
-// This source file is part of the swift-standards open source project
+// This source file is part of the swift-primitives open source project
 //
-// Copyright (c) 2024-2026 Coen ten Thije Boonkkamp and the swift-standards project authors
+// Copyright (c) 2024-2026 Coen ten Thije Boonkkamp and the swift-primitives project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE for license information
 //
 // ===----------------------------------------------------------------------===//
+
+public import Buffer_Linear_Primitives
 
 /// A dynamically-growing LIFO stack supporting move-only elements.
 ///
@@ -29,7 +31,7 @@
 ///
 /// - ``Stack``: Dynamically-growing with amortized O(1) push (this type)
 /// - ``Stack/Bounded``: Fixed-capacity with upfront allocation, throws on overflow
-/// - ``Stack/Inline``: Zero-allocation inline storage with compile-time capacity
+/// - ``Stack/Static``: Zero-allocation inline storage with compile-time capacity
 ///
 /// ## Move-Only Support
 ///
@@ -71,51 +73,27 @@
 public struct Stack<Element: ~Copyable>: ~Copyable {
 
     @usableFromInline
-    package var _storage: Storage<Element>
+    package var _buffer: Buffer<Element>.Linear
 
-    /// Cached pointer to element storage. Stored in struct to enable property-based Span access.
-    /// CRITICAL: Must be updated whenever _storage is replaced (reallocation, CoW copy).
-    @usableFromInline
-    package var _cachedPtr: UnsafeMutablePointer<Element>
-
-    // MARK: - Inline (declared here to fix Swift compiler bug with ~Copyable in extensions)
+    // MARK: - Static (declared here to fix Swift compiler bug with ~Copyable in extensions)
 
     /// A fixed-capacity, inline-storage LIFO stack with compile-time capacity.
     ///
-    /// `Stack.Inline` stores elements directly within the struct's memory layout,
+    /// `Stack.Static` stores elements directly within the struct's memory layout,
     /// requiring no heap allocation. The capacity is specified as a compile-time
     /// generic parameter.
     ///
     /// - Note: This type is declared inside `Stack` (not in an extension) due to a
     ///   Swift compiler bug where nested types with value generic parameters declared
     ///   in extensions do not properly inherit `~Copyable` constraints from the outer type.
-    public struct Inline<let capacity: Int>: ~Copyable {
-        /// Inline storage from storage-primitives.
+    public struct Static<let capacity: Int>: ~Copyable {
         @usableFromInline
-        package var _storage: Storage<Element>.Inline<capacity>
+        package var _buffer: Buffer<Element>.Linear.Inline<capacity>
 
-        @usableFromInline
-        package var _count: Int
-
-        /// Workaround for Swift compiler bug where deinit element cleanup
-        /// fails for ~Copyable structs that contain only value-type properties.
-        /// Adding a reference type property (`AnyObject?`) fixes the bug.
-        /// See: https://github.com/swiftlang/swift/issues/86652
-        @usableFromInline
-        package var _deinitWorkaround: AnyObject? = nil
-
-        /// Creates an empty inline stack.
-        ///
-        /// - Throws: `Storage<Element>.Inline<capacity>.Error` if element stride exceeds 64 bytes
-        ///   or element alignment exceeds `Int` alignment.
+        /// Creates an empty static stack.
         @inlinable
-        public init() throws(Storage<Element>.Inline<capacity>.Error) {
-            self._storage = try .init()
-            self._count = 0
-        }
-
-        deinit {
-            _storage.deinitialize(count: Stack<Element>.Index.Count(UInt(_count)))
+        public init() {
+            self._buffer = .init()
         }
     }
 
@@ -146,7 +124,7 @@ public struct Stack<Element: ~Copyable>: ~Copyable {
     /// - Occasional large instances need to be supported
     /// - Zero heap allocation for the common case is important
     ///
-    /// For fixed capacity with no spill, use ``Stack/Inline``.
+    /// For fixed capacity with no spill, use ``Stack/Static``.
     /// For unbounded growth from the start, use ``Stack``.
     ///
     /// ## Non-Copyable
@@ -161,65 +139,18 @@ public struct Stack<Element: ~Copyable>: ~Copyable {
     ///   in extensions do not properly inherit `~Copyable` constraints from the outer type.
     @safe
     public struct Small<let inlineCapacity: Int>: ~Copyable {
-        /// Inline storage from storage-primitives.
         @usableFromInline
-        package var _inline: Storage<Element>.Inline<inlineCapacity>
-
-        /// Current element count (valid elements in either inline or heap storage).
-        @usableFromInline
-        package var _count: Int
-
-        /// Heap storage when spilled. Nil when using inline storage.
-        @usableFromInline
-        package var _heap: Storage<Element>?
-
-        /// Cached pointer to heap elements. Only valid when _heap is non-nil.
-        @usableFromInline
-        package var _heapPtr: UnsafeMutablePointer<Element>?
+        package var _buffer: Buffer<Element>.Linear.Small<inlineCapacity>
 
         /// Creates an empty small stack.
-        ///
-        /// - Throws: `Storage<Element>.Inline<inlineCapacity>.Error` if element stride exceeds 64 bytes
-        ///   or element alignment exceeds `Int` alignment.
         @inlinable
-        public init() throws(Storage<Element>.Inline<inlineCapacity>.Error) {
-            self._inline = try .init()
-            self._count = 0
-            self._heap = nil
-            unsafe self._heapPtr = nil
-        }
-
-        deinit {
-            if let heap = _heap {
-                // Elements are on heap - Storage handles cleanup via its deinit
-                // But we need to set count for deinit
-                heap.count = Stack<Element>.Index.Count(UInt(_count))
-            } else {
-                // Elements are inline - delegate to Storage.Inline
-                _inline.deinitialize(count: Stack<Element>.Index.Count(UInt(_count)))
-            }
+        public init() {
+            self._buffer = .init()
         }
 
         /// Whether the stack is currently using heap storage.
         @inlinable
-        public var isSpilled: Bool { _heap != nil }
-
-        /// Spills inline storage to heap.
-        @usableFromInline
-        package mutating func _spillToHeap(minimumCapacity: Int) {
-            precondition(_heap == nil, "Already spilled")
-
-            // Create heap storage with growth factor
-            let newCapacity = Swift.max(minimumCapacity, inlineCapacity * 2, 8)
-            let newStorage = Storage<Element>.create(minimumCapacity: Stack<Element>.Index.Count(UInt(newCapacity)))
-
-            // Move elements from inline to heap
-            _inline.move(to: newStorage, count: Stack<Element>.Index.Count(UInt(_count)))
-            newStorage.count = Stack<Element>.Index.Count(UInt(_count))
-
-            _heap = newStorage
-            unsafe (_heapPtr = newStorage.pointer(at: .zero).base)
-        }
+        public var isSpilled: Bool { _buffer.isSpilled }
     }
 
     /// A fixed-capacity LIFO stack supporting move-only elements.
@@ -246,7 +177,7 @@ public struct Stack<Element: ~Copyable>: ~Copyable {
     /// - Overflow should be an explicit error
     ///
     /// For unbounded growth, use ``Stack`` (the canonical type).
-    /// For compile-time capacity with zero heap allocation, use ``Stack/Inline``.
+    /// For compile-time capacity with zero heap allocation, use ``Stack/Static``.
     ///
     /// ## Sequence Conformance
     ///
@@ -278,15 +209,10 @@ public struct Stack<Element: ~Copyable>: ~Copyable {
     @safe
     public struct Bounded: ~Copyable {
         @usableFromInline
-        package var _storage: Storage<Element>
+        package var _buffer: Buffer<Element>.Linear.Bounded
 
-        /// Cached pointer to element storage. Stored in struct to enable property-based Span access.
-        /// CRITICAL: Must be updated whenever _storage is replaced (CoW copy).
-        @usableFromInline
-        package var _cachedPtr: UnsafeMutablePointer<Element>
-
-        /// The maximum number of elements the stack can hold.
-        public let capacity: Int
+        /// The requested capacity (for overflow checking).
+        public let requestedCapacity: Int
 
         /// Creates a stack with the specified capacity.
         ///
@@ -297,13 +223,11 @@ public struct Stack<Element: ~Copyable>: ~Copyable {
             guard capacity >= 0 else {
                 throw .invalidCapacity
             }
-
-            self._storage = Storage<Element>.create(minimumCapacity: Index_Primitives.Index<Element>.Count(UInt(capacity)))
-            unsafe (self._cachedPtr = _storage.pointer(at: .zero).base)
-            self.capacity = capacity
+            self._buffer = Buffer<Element>.Linear.Bounded(
+                minimumCapacity: Index.Count(Cardinal(UInt(capacity)))
+            )
+            self.requestedCapacity = capacity
         }
-
-        // Note: No deinit needed - Storage handles cleanup
     }
 
     /// Creates an empty stack.
@@ -311,8 +235,7 @@ public struct Stack<Element: ~Copyable>: ~Copyable {
     /// No allocation occurs until the first push.
     @inlinable
     public init() {
-        self._storage = Storage<Element>.create(minimumCapacity: .zero)
-        unsafe (self._cachedPtr = _storage.pointer(at: .zero).base)
+        self._buffer = Buffer<Element>.Linear(minimumCapacity: .zero)
     }
 
     // Note: init(_ elements: Sequence) is in Stack Dynamic Primitives
@@ -325,7 +248,6 @@ public struct Stack<Element: ~Copyable>: ~Copyable {
     ///
     /// - Parameter capacity: Number of elements to reserve space for. Must be non-negative.
     /// - Throws: ``Stack/Error/invalidCapacity`` if capacity is negative.
-    /// - Note: Error type is ``Stack/Error``.
     @inlinable
     public init(reservingCapacity capacity: Int) throws(__StackError) {
         guard capacity >= 0 else {
@@ -333,14 +255,13 @@ public struct Stack<Element: ~Copyable>: ~Copyable {
         }
 
         if capacity == 0 {
-            self._storage = Storage<Element>.create(minimumCapacity: .zero)
+            self._buffer = Buffer<Element>.Linear(minimumCapacity: .zero)
         } else {
-            self._storage = Storage<Element>.create(minimumCapacity: Index_Primitives.Index<Element>.Count(UInt(capacity)))
+            self._buffer = Buffer<Element>.Linear(
+                minimumCapacity: Index.Count(Cardinal(UInt(capacity)))
+            )
         }
-        unsafe (self._cachedPtr = _storage.pointer(at: .zero).base)
     }
-
-    // Note: No deinit needed - Storage handles cleanup
 }
 
 // MARK: - Conditional Copyable

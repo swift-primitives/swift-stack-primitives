@@ -12,14 +12,14 @@
 public import Stack_Primitives_Core
 public import Buffer_Linear_Primitives
 
-// Note: Stack.Small is declared INSIDE the Stack struct body (in Stack.swift)
+// Note: Stack.Static is declared INSIDE the Stack struct body (in Stack.swift)
 // due to a Swift compiler bug where nested types with value generic parameters
 // declared in extensions do not properly inherit ~Copyable constraints from
-// the outer type. This file contains only extensions to Stack.Small.
+// the outer type. This file contains only extensions to Stack.Static.
 
 // MARK: - Properties
 
-extension Stack.Small where Element: ~Copyable {
+extension Stack.Static where Element: ~Copyable {
     /// The current number of elements in the stack.
     @inlinable
     public var count: Int { Int(bitPattern: _buffer.count) }
@@ -28,23 +28,25 @@ extension Stack.Small where Element: ~Copyable {
     @inlinable
     public var isEmpty: Bool { _buffer.isEmpty }
 
-    /// The current capacity (inline or heap).
+    /// Whether the stack is full.
     @inlinable
-    public var capacity: Int { Int(bitPattern: _buffer.capacity) }
+    public var isFull: Bool { _buffer.isFull }
 }
 
-// MARK: - Core Operations (Base - for ~Copyable elements)
+// MARK: - Core Operations
 
-extension Stack.Small where Element: ~Copyable {
+extension Stack.Static where Element: ~Copyable {
     /// Pushes an element onto the stack.
     ///
-    /// If the stack exceeds inline capacity, elements are moved to heap storage.
-    ///
     /// - Parameter element: The element to push.
-    /// - Complexity: O(1) amortized, O(n) when spilling to heap.
+    /// - Throws: ``Stack/Static/Error/overflow`` if the stack is full.
+    /// - Complexity: O(1)
     @inlinable
-    public mutating func push(_ element: consuming Element) {
-        _buffer.append(element)
+    public mutating func push(_ element: consuming Element) throws(__StackStaticError) {
+        if let rejected = _buffer.append(element) {
+            _ = consume rejected
+            throw .overflow
+        }
     }
 
     /// Pops and returns the top element, or nil if empty.
@@ -61,8 +63,6 @@ extension Stack.Small where Element: ~Copyable {
 
     /// Removes all elements from the stack.
     ///
-    /// Resets to inline mode if spilled.
-    ///
     /// - Complexity: O(n) where n is the number of elements.
     @inlinable
     public mutating func clear() {
@@ -70,12 +70,9 @@ extension Stack.Small where Element: ~Copyable {
     }
 }
 
-// Note: Stack.Small is UNCONDITIONALLY ~Copyable due to the deinit requirement
-// for inline storage cleanup. No CoW extensions are needed.
-
 // MARK: - Peek
 
-extension Stack.Small where Element: ~Copyable {
+extension Stack.Static where Element: ~Copyable {
     /// Peeks at the top element without removing it.
     ///
     /// Uses a closure to support `~Copyable` elements via borrowing.
@@ -93,7 +90,7 @@ extension Stack.Small where Element: ~Copyable {
     }
 }
 
-extension Stack.Small where Element: Copyable {
+extension Stack.Static where Element: Copyable {
     /// Returns the top element without removing it, or nil if empty.
     ///
     /// This is a convenience method for `Copyable` elements. For `~Copyable`
@@ -113,7 +110,7 @@ extension Stack.Small where Element: Copyable {
 
 // MARK: - Span Access
 
-extension Stack.Small where Element: ~Copyable {
+extension Stack.Static where Element: ~Copyable {
     /// A read-only view of the stack's elements.
     public var span: Span<Element> {
         @_lifetime(borrow self)
@@ -134,9 +131,56 @@ extension Stack.Small where Element: ~Copyable {
     }
 }
 
+// MARK: - Sendable
+
+/// `Stack.Static` is `Sendable` when its elements are `Sendable`.
+extension Stack.Static: @unchecked Sendable where Element: Sendable {}
+
+// MARK: - Iteration
+
+extension Stack.Static where Element: ~Copyable {
+    /// Calls the given closure for each element in the stack.
+    ///
+    /// Elements are visited from bottom (oldest) to top (newest).
+    ///
+    /// - Parameter body: A closure that receives each element.
+    /// - Complexity: O(n) where n is the number of elements.
+    @inlinable
+    public func forEach(_ body: (borrowing Element) -> Void) {
+        var idx: Stack<Element>.Index = .zero
+        let end = _buffer.count.map(Ordinal.init)
+        while idx < end {
+            body(_buffer[idx])
+            idx += .one
+        }
+    }
+}
+
+// MARK: - Truncate
+
+extension Stack.Static where Element: ~Copyable {
+    /// Removes elements beyond the specified count.
+    ///
+    /// If `newCount >= count`, this method has no effect.
+    /// Elements are removed from the top of the stack.
+    ///
+    /// - Parameter newCount: The maximum number of elements to retain.
+    /// - Complexity: O(k) where k is the number of removed elements.
+    @inlinable
+    public mutating func truncate(to newCount: Int) {
+        let currentCount = Int(bitPattern: _buffer.count)
+        guard newCount < currentCount else { return }
+        let targetCount = Swift.max(0, newCount)
+
+        while Int(bitPattern: _buffer.count) > targetCount {
+            _ = _buffer.removeLast()
+        }
+    }
+}
+
 // MARK: - Element Access
 
-extension Stack.Small where Element: ~Copyable {
+extension Stack.Static where Element: ~Copyable {
     /// Provides access to the element at the given index via closure.
     ///
     /// - Parameters:
@@ -169,52 +213,5 @@ extension Stack.Small where Element: ~Copyable {
         precondition(index >= 0 && index < Int(bitPattern: _buffer.count), "Index out of bounds")
         let typedIndex = Stack<Element>.Index(__unchecked: (), Ordinal(UInt(index)))
         return body(&_buffer[typedIndex])
-    }
-}
-
-// MARK: - Sendable
-
-/// `Stack.Small` is `Sendable` when its elements are `Sendable`.
-extension Stack.Small: @unchecked Sendable where Element: Sendable {}
-
-// MARK: - Iteration (for ~Copyable elements)
-
-extension Stack.Small where Element: ~Copyable {
-    /// Calls the given closure for each element in the stack.
-    ///
-    /// Elements are visited from bottom (oldest) to top (newest).
-    ///
-    /// - Parameter body: A closure that receives each element.
-    /// - Complexity: O(n) where n is the number of elements.
-    @inlinable
-    public func forEach(_ body: (borrowing Element) -> Void) {
-        var idx: Stack<Element>.Index = .zero
-        let end = _buffer.count.map(Ordinal.init)
-        while idx < end {
-            body(_buffer[idx])
-            idx += .one
-        }
-    }
-}
-
-// MARK: - Truncate
-
-extension Stack.Small where Element: ~Copyable {
-    /// Removes elements beyond the specified count.
-    ///
-    /// If `newCount >= count`, this method has no effect.
-    /// Elements are removed from the top of the stack.
-    ///
-    /// - Parameter newCount: The maximum number of elements to retain.
-    /// - Complexity: O(k) where k is the number of removed elements.
-    @inlinable
-    public mutating func truncate(to newCount: Int) {
-        let currentCount = Int(bitPattern: _buffer.count)
-        guard newCount < currentCount else { return }
-        let targetCount = Swift.max(0, newCount)
-
-        while Int(bitPattern: _buffer.count) > targetCount {
-            _ = _buffer.removeLast()
-        }
     }
 }

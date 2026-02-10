@@ -23,21 +23,19 @@ let package = Package(
     ],
     dependencies: [
         .package(path: "../swift-index-primitives"),
-        .package(path: "../swift-storage-primitives"),
+        .package(path: "../swift-buffer-primitives"),
         .package(path: "../swift-collection-primitives"),
         .package(path: "../swift-property-primitives"),
-        .package(path: "../swift-range-primitives"),
         .package(path: "../swift-sequence-primitives"),
     ],
     targets: [
-        // Core types with ~Copyable support (Stack, Inline, Small, Bounded structs)
+        // Core types with ~Copyable support (Stack, Static, Small, Bounded structs)
         .target(
             name: "Stack Primitives Core",
             dependencies: [
                 .product(name: "Index Primitives", package: "swift-index-primitives"),
                 .product(name: "Property Primitives", package: "swift-property-primitives"),
-                .product(name: "Range Primitives", package: "swift-range-primitives"),
-                .product(name: "Storage Primitives", package: "swift-storage-primitives"),
+                .product(name: "Buffer Linear Primitives", package: "swift-buffer-primitives"),
             ]
         ),
         // Per-variant modules: Protocol conformances (Element: Copyable)
@@ -48,7 +46,6 @@ let package = Package(
                 "Stack Primitives Core",
                 .product(name: "Collection Primitives", package: "swift-collection-primitives"),
                 .product(name: "Sequence Primitives", package: "swift-sequence-primitives"),
-                .product(name: "Range Primitives", package: "swift-range-primitives"),
             ]
         ),
         .target(
@@ -57,16 +54,14 @@ let package = Package(
                 "Stack Primitives Core",
                 .product(name: "Collection Primitives", package: "swift-collection-primitives"),
                 .product(name: "Sequence Primitives", package: "swift-sequence-primitives"),
-                .product(name: "Range Primitives", package: "swift-range-primitives"),
             ]
         ),
         .target(
-            name: "Stack Inline Primitives",  // Fixed-capacity inline stack
+            name: "Stack Static Primitives",  // Fixed-capacity inline stack
             dependencies: [
                 "Stack Primitives Core",
                 .product(name: "Collection Primitives", package: "swift-collection-primitives"),
                 .product(name: "Sequence Primitives", package: "swift-sequence-primitives"),
-                .product(name: "Range Primitives", package: "swift-range-primitives"),
             ]
         ),
         .target(
@@ -75,7 +70,6 @@ let package = Package(
                 "Stack Primitives Core",
                 .product(name: "Collection Primitives", package: "swift-collection-primitives"),
                 .product(name: "Sequence Primitives", package: "swift-sequence-primitives"),
-                .product(name: "Range Primitives", package: "swift-range-primitives"),
             ]
         ),
         // Public: Re-exports Core and all variant modules
@@ -85,7 +79,7 @@ let package = Package(
                 "Stack Primitives Core",
                 "Stack Dynamic Primitives",
                 "Stack Bounded Primitives",
-                "Stack Inline Primitives",
+                "Stack Static Primitives",
                 "Stack Small Primitives",
             ]
         ),

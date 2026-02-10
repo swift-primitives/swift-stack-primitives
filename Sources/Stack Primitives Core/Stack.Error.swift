@@ -1,8 +1,8 @@
 // ===----------------------------------------------------------------------===//
 //
-// This source file is part of the swift-standards open source project
+// This source file is part of the swift-primitives open source project
 //
-// Copyright (c) 2024-2025 Coen ten Thije Boonkkamp and the swift-standards project authors
+// Copyright (c) 2024-2026 Coen ten Thije Boonkkamp and the swift-primitives project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE for license information
@@ -21,7 +21,7 @@
 // Use the typealias forms in your code:
 // - Stack<Element>.Error
 // - Stack<Element>.Bounded.Error
-// - Stack<Element>.Inline.Error
+// - Stack<Element>.Static.Error
 
 /// Hoisted implementation of ``Stack/Error``.
 ///
@@ -42,10 +42,10 @@ public enum __StackBoundedError: Swift.Error, Sendable, Equatable {
     case overflow
 }
 
-/// Hoisted implementation of ``Stack/Inline/Error``.
+/// Hoisted implementation of ``Stack/Static/Error``.
 ///
-/// - Note: Use ``Stack/Inline/Error`` in your code, not this type directly.
-public enum __StackInlineError: Swift.Error, Sendable, Equatable {
+/// - Note: Use ``Stack/Static/Error`` in your code, not this type directly.
+public enum __StackStaticError: Swift.Error, Sendable, Equatable {
     /// The stack is full and cannot accept more elements.
     case overflow
 }
@@ -75,14 +75,14 @@ extension Stack.Bounded {
     public typealias Error = __StackBoundedError
 }
 
-extension Stack.Inline {
-    /// Errors that can occur during inline stack operations.
+extension Stack.Static {
+    /// Errors that can occur during static stack operations.
     ///
-    /// For `Stack.Inline`, only `overflow` can occur. The capacity is
+    /// For `Stack.Static`, only `overflow` can occur. The capacity is
     /// fixed at compile time, so `invalidCapacity` is impossible.
     ///
     /// ## Cases
     ///
-    /// - ``Stack/Inline/Error/overflow``: The stack is full and cannot accept more elements.
-    public typealias Error = __StackInlineError
+    /// - ``Stack/Static/Error/overflow``: The stack is full and cannot accept more elements.
+    public typealias Error = __StackStaticError
 }
