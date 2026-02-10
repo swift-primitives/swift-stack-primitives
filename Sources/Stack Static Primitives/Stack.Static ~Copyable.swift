@@ -22,7 +22,7 @@ public import Buffer_Linear_Primitives
 extension Stack.Static where Element: ~Copyable {
     /// The current number of elements in the stack.
     @inlinable
-    public var count: Int { Int(bitPattern: _buffer.count) }
+    public var count: Stack<Element>.Index.Count { _buffer.count }
 
     /// Whether the stack is empty.
     @inlinable

@@ -162,7 +162,7 @@ public struct Stack<Element: ~Copyable>: ~Copyable {
     /// ## Example
     ///
     /// ```swift
-    /// var stack = try Stack<Int>.Bounded(capacity: 10)
+    /// var stack = Stack<Int>.Bounded(capacity: 10)
     /// try stack.push(1)
     /// try stack.push(2)
     /// stack.pop()        // Optional(2)
@@ -212,19 +212,15 @@ public struct Stack<Element: ~Copyable>: ~Copyable {
         package var _buffer: Buffer<Element>.Linear.Bounded
 
         /// The requested capacity (for overflow checking).
-        public let requestedCapacity: Int
+        public let requestedCapacity: Index.Count
 
         /// Creates a stack with the specified capacity.
         ///
-        /// - Parameter capacity: Maximum number of elements. Must be non-negative.
-        /// - Throws: ``Stack/Bounded/Error/invalidCapacity`` if capacity is negative.
+        /// - Parameter capacity: Maximum number of elements.
         @inlinable
-        public init(capacity: Int) throws(__StackBoundedError<Element>) {
-            guard capacity >= 0 else {
-                throw .invalidCapacity
-            }
+        public init(capacity: Index.Count) {
             self._buffer = Buffer<Element>.Linear.Bounded(
-                minimumCapacity: Index.Count(Cardinal(UInt(capacity)))
+                minimumCapacity: capacity
             )
             self.requestedCapacity = capacity
         }
@@ -246,21 +242,10 @@ public struct Stack<Element: ~Copyable>: ~Copyable {
     /// Pre-allocates storage for the specified number of elements.
     /// Useful when the approximate number of elements is known.
     ///
-    /// - Parameter capacity: Number of elements to reserve space for. Must be non-negative.
-    /// - Throws: ``Stack/Error/invalidCapacity`` if capacity is negative.
+    /// - Parameter capacity: Number of elements to reserve space for.
     @inlinable
-    public init(reservingCapacity capacity: Int) throws(__StackError<Element>) {
-        guard capacity >= 0 else {
-            throw .invalidCapacity
-        }
-
-        if capacity == 0 {
-            self._buffer = Buffer<Element>.Linear(minimumCapacity: .zero)
-        } else {
-            self._buffer = Buffer<Element>.Linear(
-                minimumCapacity: Index.Count(Cardinal(UInt(capacity)))
-            )
-        }
+    public init(reservingCapacity capacity: Index.Count) {
+        self._buffer = Buffer<Element>.Linear(minimumCapacity: capacity)
     }
 }
 

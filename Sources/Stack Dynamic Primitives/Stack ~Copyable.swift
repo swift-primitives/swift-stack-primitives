@@ -17,7 +17,7 @@ public import Buffer_Linear_Primitives
 extension Stack where Element: ~Copyable {
     /// The current number of elements in the stack.
     @inlinable
-    public var count: Int { Int(bitPattern: _buffer.count) }
+    public var count: Index.Count { _buffer.count }
 
     /// Whether the stack is empty.
     @inlinable
@@ -25,7 +25,7 @@ extension Stack where Element: ~Copyable {
 
     /// The current capacity of the stack.
     @inlinable
-    public var capacity: Int { Int(bitPattern: _buffer.capacity) }
+    public var capacity: Index.Count { _buffer.capacity }
 }
 
 // MARK: - Capacity Management

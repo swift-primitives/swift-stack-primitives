@@ -19,7 +19,7 @@ public import Buffer_Linear_Primitives
 extension Stack.Bounded where Element: ~Copyable {
     /// The current number of elements in the stack.
     @inlinable
-    public var count: Int { Int(bitPattern: _buffer.count) }
+    public var count: Stack<Element>.Index.Count { _buffer.count }
 
     /// Whether the stack is empty.
     @inlinable
@@ -27,11 +27,11 @@ extension Stack.Bounded where Element: ~Copyable {
 
     /// The requested capacity of the stack.
     @inlinable
-    public var capacity: Int { requestedCapacity }
+    public var capacity: Stack<Element>.Index.Count { requestedCapacity }
 
     /// Whether the stack is full.
     @inlinable
-    public var isFull: Bool { Int(bitPattern: _buffer.count) >= requestedCapacity }
+    public var isFull: Bool { _buffer.count >= requestedCapacity }
 }
 
 // MARK: - Core Operations (Base - for ~Copyable elements)
@@ -44,7 +44,7 @@ extension Stack.Bounded where Element: ~Copyable {
     /// - Complexity: O(1)
     @inlinable
     public mutating func push(_ element: consuming Element) throws(__StackBoundedError<Element>) {
-        guard Int(bitPattern: _buffer.count) < requestedCapacity else {
+        guard _buffer.count < requestedCapacity else {
             throw .overflow
         }
         if let rejected = _buffer.append(element) {
@@ -86,7 +86,7 @@ extension Stack.Bounded where Element: Copyable {
     /// Pushes an element onto the stack (CoW-aware).
     @inlinable
     public mutating func push(_ element: Element) throws(__StackBoundedError<Element>) {
-        guard Int(bitPattern: _buffer.count) < requestedCapacity else {
+        guard _buffer.count < requestedCapacity else {
             throw .overflow
         }
         if let rejected = _buffer.append(element) {

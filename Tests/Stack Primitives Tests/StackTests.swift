@@ -19,8 +19,8 @@ import Index_Primitives_Test_Support
 @Suite("Stack.Bounded")
 struct StackBoundedTests {
     @Test("Initialize with valid capacity")
-    func initializeWithValidCapacity() throws {
-        let stack = try Stack<Int>.Bounded(capacity: 10)
+    func initializeWithValidCapacity() {
+        let stack = Stack<Int>.Bounded(capacity: 10)
         #expect(stack.capacity == 10)
         #expect(stack.count == 0)
         #expect(stack.isEmpty == true)
@@ -28,24 +28,17 @@ struct StackBoundedTests {
     }
 
     @Test("Initialize with zero capacity")
-    func initializeWithZeroCapacity() throws {
-        let stack = try Stack<Int>.Bounded(capacity: 0)
+    func initializeWithZeroCapacity() {
+        let stack = Stack<Int>.Bounded(capacity: 0)
         #expect(stack.capacity == 0)
         #expect(stack.count == 0)
         #expect(stack.isEmpty == true)
         #expect(stack.isFull == true) // zero capacity is always full
     }
 
-    @Test("Initialize with negative capacity throws")
-    func initializeWithNegativeCapacity() {
-        #expect(throws: __StackBoundedError<Int>.invalidCapacity) {
-            _ = try Stack<Int>.Bounded(capacity: -1)
-        }
-    }
-
     @Test("Push and pop single element")
     func pushAndPopSingleElement() throws {
-        var stack = try Stack<Int>.Bounded(capacity: 5)
+        var stack = Stack<Int>.Bounded(capacity: 5)
         try stack.push(42)
         #expect(stack.count == 1)
         #expect(stack.isEmpty == false)
@@ -58,7 +51,7 @@ struct StackBoundedTests {
 
     @Test("Push and pop multiple elements (LIFO order)")
     func pushAndPopMultipleElements() throws {
-        var stack = try Stack<Int>.Bounded(capacity: 5)
+        var stack = Stack<Int>.Bounded(capacity: 5)
         try stack.push(1)
         try stack.push(2)
         try stack.push(3)
@@ -70,14 +63,14 @@ struct StackBoundedTests {
     }
 
     @Test("Pop from empty stack returns nil")
-    func popFromEmptyStack() throws {
-        var stack = try Stack<Int>.Bounded(capacity: 5)
+    func popFromEmptyStack() {
+        var stack = Stack<Int>.Bounded(capacity: 5)
         #expect(stack.pop() == nil)
     }
 
     @Test("Push to full stack throws overflow")
     func pushToFullStackThrows() throws {
-        var stack = try Stack<Int>.Bounded(capacity: 2)
+        var stack = Stack<Int>.Bounded(capacity: 2)
         try stack.push(1)
         try stack.push(2)
         #expect(stack.isFull == true)
@@ -89,7 +82,7 @@ struct StackBoundedTests {
 
     @Test("Peek returns top element without removing")
     func peekReturnsTopWithoutRemoving() throws {
-        var stack = try Stack<Int>.Bounded(capacity: 5)
+        var stack = Stack<Int>.Bounded(capacity: 5)
         try stack.push(1)
         try stack.push(2)
 
@@ -102,15 +95,15 @@ struct StackBoundedTests {
     }
 
     @Test("Peek on empty stack returns nil")
-    func peekOnEmptyStackReturnsNil() throws {
-        let stack = try Stack<Int>.Bounded(capacity: 5)
+    func peekOnEmptyStackReturnsNil() {
+        let stack = Stack<Int>.Bounded(capacity: 5)
         let result = stack.peek { $0 }
         #expect(result == nil)
     }
 
     @Test("Span provides read-only access")
     func spanProvidesReadOnlyAccess() throws {
-        var stack = try Stack<Int>.Bounded(capacity: 5)
+        var stack = Stack<Int>.Bounded(capacity: 5)
         try stack.push(1)
         try stack.push(2)
         try stack.push(3)
@@ -124,7 +117,7 @@ struct StackBoundedTests {
 
     @Test("Clear removes all elements")
     func clearRemovesAllElements() throws {
-        var stack = try Stack<Int>.Bounded(capacity: 5)
+        var stack = Stack<Int>.Bounded(capacity: 5)
         try stack.push(1)
         try stack.push(2)
         try stack.push(3)
@@ -138,7 +131,7 @@ struct StackBoundedTests {
 
     @Test("Peek sugar returns top element for Copyable")
     func peekSugarReturnsCopyableElement() throws {
-        var stack = try Stack<Int>.Bounded(capacity: 5)
+        var stack = Stack<Int>.Bounded(capacity: 5)
         try stack.push(1)
         try stack.push(2)
 
@@ -162,19 +155,12 @@ struct StackTests {
     }
 
     @Test("Initialize with reserved capacity")
-    func initializeWithReservedCapacity() throws {
-        let stack = try Stack<Int>(reservingCapacity: 10)
+    func initializeWithReservedCapacity() {
+        let stack = Stack<Int>(reservingCapacity: 10)
         #expect(stack.count == 0)
         #expect(stack.isEmpty == true)
         // ManagedBuffer may allocate slightly more than requested
         #expect(stack.capacity >= 10)
-    }
-
-    @Test("Initialize with negative reserved capacity throws")
-    func initializeWithNegativeReservedCapacity() {
-        #expect(throws: __StackError<Int>.invalidCapacity) {
-            _ = try Stack<Int>(reservingCapacity: -1)
-        }
     }
 
     @Test("Push and pop single element")
@@ -216,7 +202,7 @@ struct StackTests {
         // Push elements and verify capacity grows as needed
         stack.push(1)
         #expect(stack.capacity >= 1)
-        let capacityAfterFirst = stack.capacity
+        let capacityAfterFirst = Int(bitPattern: stack.capacity)
 
         // Fill to capacity (if capacity > 1)
         if capacityAfterFirst > 1 {
@@ -224,12 +210,12 @@ struct StackTests {
                 stack.push(i)
             }
         }
-        #expect(stack.count == capacityAfterFirst)
+        #expect(Int(bitPattern: stack.count) == capacityAfterFirst)
         #expect(stack.capacity >= stack.count)
         let capacityWhenFull = stack.capacity
 
         // Push beyond capacity - should grow
-        stack.push(capacityWhenFull + 1)
+        stack.push(Int(bitPattern: capacityWhenFull) + 1)
         #expect(stack.capacity > capacityWhenFull)
         #expect(stack.capacity >= stack.count)
     }
@@ -362,7 +348,7 @@ struct MoveOnlyElementTests {
 
     @Test("Bounded stack with move-only elements")
     func boundedStackWithMoveOnlyElements() throws {
-        var stack = try Stack<MoveOnlyValue>.Bounded(capacity: 5)
+        var stack = Stack<MoveOnlyValue>.Bounded(capacity: 5)
         try stack.push(MoveOnlyValue(1))
         try stack.push(MoveOnlyValue(2))
 
@@ -704,7 +690,7 @@ struct StackStaticStressTests {
         let tracker = DeinitTracker()
 
         do {
-            var stack = try Stack<TrackedValue>.Bounded(capacity: 8)
+            var stack = Stack<TrackedValue>.Bounded(capacity: 8)
             try stack.push(TrackedValue(1, tracker: tracker))
             try stack.push(TrackedValue(2, tracker: tracker))
             try stack.push(TrackedValue(3, tracker: tracker))

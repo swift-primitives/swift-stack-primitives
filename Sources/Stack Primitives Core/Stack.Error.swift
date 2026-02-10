@@ -30,9 +30,6 @@ import Index_Primitives
 ///
 /// - Note: Use ``Stack/Error`` in your code, not this type directly.
 public enum __StackError<Element: ~Copyable>: Swift.Error, Sendable, Equatable {
-    /// The requested capacity is invalid (negative).
-    case invalidCapacity
-
     /// An index was out of bounds.
     case bounds(Bounds)
 
@@ -52,8 +49,6 @@ public enum __StackError<Element: ~Copyable>: Swift.Error, Sendable, Equatable {
 extension __StackError: CustomStringConvertible {
     public var description: String {
         switch self {
-        case .invalidCapacity:
-            return "invalid capacity"
         case .bounds(let e):
             return "index \(Int(bitPattern: e.index)) out of bounds for count \(Int(bitPattern: e.count))"
         }
@@ -64,9 +59,6 @@ extension __StackError: CustomStringConvertible {
 ///
 /// - Note: Use ``Stack/Bounded/Error`` in your code, not this type directly.
 public enum __StackBoundedError<Element: ~Copyable>: Swift.Error, Sendable, Equatable {
-    /// The requested capacity is invalid (negative).
-    case invalidCapacity
-
     /// The stack is full and cannot accept more elements.
     case overflow
 
@@ -89,8 +81,6 @@ public enum __StackBoundedError<Element: ~Copyable>: Swift.Error, Sendable, Equa
 extension __StackBoundedError: CustomStringConvertible {
     public var description: String {
         switch self {
-        case .invalidCapacity:
-            return "invalid capacity"
         case .overflow:
             return "bounded stack is full"
         case .bounds(let e):
@@ -169,7 +159,6 @@ extension Stack {
     ///
     /// ## Cases
     ///
-    /// - ``Stack/Error/invalidCapacity``: The requested capacity is invalid (negative).
     /// - ``Stack/Error/bounds(_:)``: An index was out of bounds.
     public typealias Error = __StackError<Element>
 }
@@ -179,7 +168,6 @@ extension Stack.Bounded {
     ///
     /// ## Cases
     ///
-    /// - ``Stack/Bounded/Error/invalidCapacity``: The requested capacity is invalid (negative).
     /// - ``Stack/Bounded/Error/overflow``: The stack is full and cannot accept more elements.
     /// - ``Stack/Bounded/Error/bounds(_:)``: An index was out of bounds.
     public typealias Error = __StackBoundedError<Element>
