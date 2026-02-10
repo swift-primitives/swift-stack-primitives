@@ -198,11 +198,9 @@ extension Stack.Bounded where Element: ~Copyable {
     /// Removes elements beyond the specified count.
     @inlinable
     public mutating func truncate(to newCount: Int) {
-        let currentCount = Int(bitPattern: _buffer.count)
-        guard newCount < currentCount else { return }
-        let targetCount = Swift.max(0, newCount)
-
-        while Int(bitPattern: _buffer.count) > targetCount {
+        let targetCount = Stack<Element>.Index.Count(clamping: newCount)
+        guard targetCount < _buffer.count else { return }
+        while _buffer.count > targetCount {
             _ = _buffer.removeLast()
         }
     }
@@ -214,11 +212,9 @@ extension Stack.Bounded where Element: Copyable {
     /// Removes elements beyond the specified count (CoW-aware).
     @inlinable
     public mutating func truncate(to newCount: Int) {
-        let currentCount = Int(bitPattern: _buffer.count)
-        guard newCount < currentCount else { return }
-        let targetCount = Swift.max(0, newCount)
-
-        while Int(bitPattern: _buffer.count) > targetCount {
+        let targetCount = Stack<Element>.Index.Count(clamping: newCount)
+        guard targetCount < _buffer.count else { return }
+        while _buffer.count > targetCount {
             _ = _buffer.removeLast()
         }
     }
@@ -234,11 +230,11 @@ extension Stack.Bounded where Element: ~Copyable {
     @inlinable
     public subscript(index: Stack<Element>.Index) -> Element {
         _read {
-            precondition(index >= .zero && Int(bitPattern: index) < Int(bitPattern: _buffer.count), "Index out of bounds")
+            precondition(index >= .zero && index < _buffer.count, "Index out of bounds")
             yield _buffer[index]
         }
         _modify {
-            precondition(index >= .zero && Int(bitPattern: index) < Int(bitPattern: _buffer.count), "Index out of bounds")
+            precondition(index >= .zero && index < _buffer.count, "Index out of bounds")
             yield &_buffer[index]
         }
     }
@@ -252,11 +248,11 @@ extension Stack.Bounded where Element: Copyable {
     @inlinable
     public subscript(index: Stack<Element>.Index) -> Element {
         _read {
-            precondition(index >= .zero && Int(bitPattern: index) < Int(bitPattern: _buffer.count), "Index out of bounds")
+            precondition(index >= .zero && index < _buffer.count, "Index out of bounds")
             yield _buffer[index]
         }
         _modify {
-            precondition(index >= .zero && Int(bitPattern: index) < Int(bitPattern: _buffer.count), "Index out of bounds")
+            precondition(index >= .zero && index < _buffer.count, "Index out of bounds")
             yield &_buffer[index]
         }
     }
@@ -271,7 +267,7 @@ extension Stack.Bounded where Element: Copyable {
     /// - Returns: The element at the index, or `nil` if out of bounds.
     @inlinable
     public func element(at index: Stack<Element>.Index) -> Element? {
-        guard index >= .zero && Int(bitPattern: index) < Int(bitPattern: _buffer.count) else { return nil }
+        guard index >= .zero && index < _buffer.count else { return nil }
         return _buffer[index]
     }
 }

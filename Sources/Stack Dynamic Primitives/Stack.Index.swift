@@ -24,11 +24,11 @@ extension Stack where Element: ~Copyable {
     @inlinable
     public subscript(index: Index) -> Element {
         _read {
-            precondition(index >= .zero && Int(bitPattern: index) < Int(bitPattern: _buffer.count), "Index out of bounds")
+            precondition(index >= .zero && index < _buffer.count, "Index out of bounds")
             yield _buffer[index]
         }
         _modify {
-            precondition(index >= .zero && Int(bitPattern: index) < Int(bitPattern: _buffer.count), "Index out of bounds")
+            precondition(index >= .zero && index < _buffer.count, "Index out of bounds")
             yield &_buffer[index]
         }
     }
@@ -42,11 +42,11 @@ extension Stack where Element: Copyable {
     @inlinable
     public subscript(index: Index) -> Element {
         _read {
-            precondition(index >= .zero && Int(bitPattern: index) < Int(bitPattern: _buffer.count), "Index out of bounds")
+            precondition(index >= .zero && index < _buffer.count, "Index out of bounds")
             yield _buffer[index]
         }
         _modify {
-            precondition(index >= .zero && Int(bitPattern: index) < Int(bitPattern: _buffer.count), "Index out of bounds")
+            precondition(index >= .zero && index < _buffer.count, "Index out of bounds")
             yield &_buffer[index]
         }
     }
@@ -64,11 +64,11 @@ extension Stack.Static where Element: Copyable {
     @inlinable
     public subscript(index: Stack<Element>.Index) -> Element {
         _read {
-            precondition(index >= .zero && Int(bitPattern: index) < Int(bitPattern: _buffer.count), "Index out of bounds")
+            precondition(index >= .zero && index < _buffer.count, "Index out of bounds")
             yield _buffer[index]
         }
         _modify {
-            precondition(index >= .zero && Int(bitPattern: index) < Int(bitPattern: _buffer.count), "Index out of bounds")
+            precondition(index >= .zero && index < _buffer.count, "Index out of bounds")
             yield &_buffer[index]
         }
     }
@@ -83,7 +83,7 @@ extension Stack where Element: Copyable {
     /// - Returns: The element at the index, or `nil` if out of bounds.
     @inlinable
     public func element(at index: Index) -> Element? {
-        guard index >= .zero && Int(bitPattern: index) < Int(bitPattern: _buffer.count) else { return nil }
+        guard index >= .zero && index < _buffer.count else { return nil }
         return _buffer[index]
     }
 }

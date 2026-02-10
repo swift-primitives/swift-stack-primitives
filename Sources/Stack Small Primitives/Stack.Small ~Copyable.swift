@@ -209,11 +209,9 @@ extension Stack.Small where Element: ~Copyable {
     /// - Complexity: O(k) where k is the number of removed elements.
     @inlinable
     public mutating func truncate(to newCount: Int) {
-        let currentCount = Int(bitPattern: _buffer.count)
-        guard newCount < currentCount else { return }
-        let targetCount = Swift.max(0, newCount)
-
-        while Int(bitPattern: _buffer.count) > targetCount {
+        let targetCount = Stack<Element>.Index.Count(clamping: newCount)
+        guard targetCount < _buffer.count else { return }
+        while _buffer.count > targetCount {
             _ = _buffer.removeLast()
         }
     }
