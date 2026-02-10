@@ -42,7 +42,7 @@ extension Stack.Static where Element: ~Copyable {
     /// - Throws: ``Stack/Static/Error/overflow`` if the stack is full.
     /// - Complexity: O(1)
     @inlinable
-    public mutating func push(_ element: consuming Element) throws(__StackStaticError) {
+    public mutating func push(_ element: consuming Element) throws(__StackStaticError<Element>) {
         if let rejected = _buffer.append(element) {
             _ = consume rejected
             throw .overflow
@@ -193,6 +193,24 @@ extension Stack.Static where Element: ~Copyable {
         precondition(index >= 0 && index < Int(bitPattern: _buffer.count), "Index out of bounds")
         let typedIndex = Stack<Element>.Index(__unchecked: (), Ordinal(UInt(index)))
         return body(_buffer[typedIndex])
+    }
+
+    /// Provides access to the element at the given typed index via closure, with typed error on bounds failure.
+    ///
+    /// - Parameters:
+    ///   - index: The typed index of the element.
+    ///   - body: A closure that receives a borrowed reference to the element.
+    /// - Returns: The value returned by the closure.
+    /// - Throws: ``Stack/Static/Error/bounds(_:)`` if the index is out of bounds.
+    @inlinable
+    public func withElement<R>(
+        at index: Stack<Element>.Index,
+        _ body: (borrowing Element) throws(__StackStaticError<Element>) -> R
+    ) throws(__StackStaticError<Element>) -> R {
+        guard index < _buffer.count else {
+            throw .bounds(.init(index: index, count: _buffer.count))
+        }
+        return try body(_buffer[index])
     }
 
     /// Provides mutable access to the element at the given index via closure.

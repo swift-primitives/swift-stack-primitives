@@ -43,7 +43,7 @@ extension Stack.Bounded where Element: ~Copyable {
     /// - Throws: ``Stack/Bounded/Error/overflow`` if the stack is full.
     /// - Complexity: O(1)
     @inlinable
-    public mutating func push(_ element: consuming Element) throws(__StackBoundedError) {
+    public mutating func push(_ element: consuming Element) throws(__StackBoundedError<Element>) {
         guard Int(bitPattern: _buffer.count) < requestedCapacity else {
             throw .overflow
         }
@@ -85,7 +85,7 @@ extension Stack.Bounded where Element: ~Copyable {
 extension Stack.Bounded where Element: Copyable {
     /// Pushes an element onto the stack (CoW-aware).
     @inlinable
-    public mutating func push(_ element: Element) throws(__StackBoundedError) {
+    public mutating func push(_ element: Element) throws(__StackBoundedError<Element>) {
         guard Int(bitPattern: _buffer.count) < requestedCapacity else {
             throw .overflow
         }
@@ -266,6 +266,19 @@ extension Stack.Bounded where Element: Copyable {
     @inlinable
     public func element(at index: Stack<Element>.Index) -> Element? {
         guard index < _buffer.count else { return nil }
+        return _buffer[index]
+    }
+
+    /// Returns the element at the typed index, with typed error on bounds failure.
+    ///
+    /// - Parameter index: The typed index of the element to access.
+    /// - Returns: The element at the index.
+    /// - Throws: ``Stack/Bounded/Error/bounds(_:)`` if the index is out of bounds.
+    @inlinable
+    public func element(at index: Stack<Element>.Index) throws(__StackBoundedError<Element>) -> Element {
+        guard index < _buffer.count else {
+            throw .bounds(.init(index: index, count: _buffer.count))
+        }
         return _buffer[index]
     }
 }

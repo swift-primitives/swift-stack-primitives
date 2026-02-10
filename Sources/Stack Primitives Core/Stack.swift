@@ -219,7 +219,7 @@ public struct Stack<Element: ~Copyable>: ~Copyable {
         /// - Parameter capacity: Maximum number of elements. Must be non-negative.
         /// - Throws: ``Stack/Bounded/Error/invalidCapacity`` if capacity is negative.
         @inlinable
-        public init(capacity: Int) throws(__StackBoundedError) {
+        public init(capacity: Int) throws(__StackBoundedError<Element>) {
             guard capacity >= 0 else {
                 throw .invalidCapacity
             }
@@ -249,7 +249,7 @@ public struct Stack<Element: ~Copyable>: ~Copyable {
     /// - Parameter capacity: Number of elements to reserve space for. Must be non-negative.
     /// - Throws: ``Stack/Error/invalidCapacity`` if capacity is negative.
     @inlinable
-    public init(reservingCapacity capacity: Int) throws(__StackError) {
+    public init(reservingCapacity capacity: Int) throws(__StackError<Element>) {
         guard capacity >= 0 else {
             throw .invalidCapacity
         }

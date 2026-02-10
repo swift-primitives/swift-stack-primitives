@@ -86,6 +86,19 @@ extension Stack where Element: Copyable {
         guard index < _buffer.count else { return nil }
         return _buffer[index]
     }
+
+    /// Returns the element at the typed index, with typed error on bounds failure.
+    ///
+    /// - Parameter index: The typed index of the element to access.
+    /// - Returns: The element at the index.
+    /// - Throws: ``Stack/Error/bounds(_:)`` if the index is out of bounds.
+    @inlinable
+    public func element(at index: Index) throws(__StackError<Element>) -> Element {
+        guard index < _buffer.count else {
+            throw .bounds(.init(index: index, count: _buffer.count))
+        }
+        return _buffer[index]
+    }
 }
 
 // Note: Stack.Bounded element(at:) is in Stack Bounded Primitives

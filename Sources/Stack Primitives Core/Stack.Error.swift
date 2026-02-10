@@ -9,6 +9,8 @@
 //
 // ===----------------------------------------------------------------------===//
 
+import Index_Primitives
+
 // MARK: - Hoisted Error Types (Module Level)
 //
 // Swift does not allow nested types inside generic types to be easily accessed.
@@ -22,32 +24,142 @@
 // - Stack<Element>.Error
 // - Stack<Element>.Bounded.Error
 // - Stack<Element>.Static.Error
+// - Stack<Element>.Small.Error
 
 /// Hoisted implementation of ``Stack/Error``.
 ///
 /// - Note: Use ``Stack/Error`` in your code, not this type directly.
-public enum __StackError: Swift.Error, Sendable, Equatable {
+public enum __StackError<Element: ~Copyable>: Swift.Error, Sendable, Equatable {
     /// The requested capacity is invalid (negative).
     case invalidCapacity
+
+    /// An index was out of bounds.
+    case bounds(Bounds)
+
+    /// Bounds violation payload.
+    public struct Bounds: Sendable, Equatable {
+        public let index: Index_Primitives.Index<Element>
+        public let count: Index_Primitives.Index<Element>.Count
+
+        @inlinable
+        public init(index: Index_Primitives.Index<Element>, count: Index_Primitives.Index<Element>.Count) {
+            self.index = index
+            self.count = count
+        }
+    }
+}
+
+extension __StackError: CustomStringConvertible {
+    public var description: String {
+        switch self {
+        case .invalidCapacity:
+            return "invalid capacity"
+        case .bounds(let e):
+            return "index \(Int(bitPattern: e.index)) out of bounds for count \(Int(bitPattern: e.count))"
+        }
+    }
 }
 
 /// Hoisted implementation of ``Stack/Bounded/Error``.
 ///
 /// - Note: Use ``Stack/Bounded/Error`` in your code, not this type directly.
-public enum __StackBoundedError: Swift.Error, Sendable, Equatable {
+public enum __StackBoundedError<Element: ~Copyable>: Swift.Error, Sendable, Equatable {
     /// The requested capacity is invalid (negative).
     case invalidCapacity
 
     /// The stack is full and cannot accept more elements.
     case overflow
+
+    /// An index was out of bounds.
+    case bounds(Bounds)
+
+    /// Bounds violation payload.
+    public struct Bounds: Sendable, Equatable {
+        public let index: Index_Primitives.Index<Element>
+        public let count: Index_Primitives.Index<Element>.Count
+
+        @inlinable
+        public init(index: Index_Primitives.Index<Element>, count: Index_Primitives.Index<Element>.Count) {
+            self.index = index
+            self.count = count
+        }
+    }
+}
+
+extension __StackBoundedError: CustomStringConvertible {
+    public var description: String {
+        switch self {
+        case .invalidCapacity:
+            return "invalid capacity"
+        case .overflow:
+            return "bounded stack is full"
+        case .bounds(let e):
+            return "index \(Int(bitPattern: e.index)) out of bounds for count \(Int(bitPattern: e.count))"
+        }
+    }
 }
 
 /// Hoisted implementation of ``Stack/Static/Error``.
 ///
 /// - Note: Use ``Stack/Static/Error`` in your code, not this type directly.
-public enum __StackStaticError: Swift.Error, Sendable, Equatable {
+public enum __StackStaticError<Element: ~Copyable>: Swift.Error, Sendable, Equatable {
     /// The stack is full and cannot accept more elements.
     case overflow
+
+    /// An index was out of bounds.
+    case bounds(Bounds)
+
+    /// Bounds violation payload.
+    public struct Bounds: Sendable, Equatable {
+        public let index: Index_Primitives.Index<Element>
+        public let count: Index_Primitives.Index<Element>.Count
+
+        @inlinable
+        public init(index: Index_Primitives.Index<Element>, count: Index_Primitives.Index<Element>.Count) {
+            self.index = index
+            self.count = count
+        }
+    }
+}
+
+extension __StackStaticError: CustomStringConvertible {
+    public var description: String {
+        switch self {
+        case .overflow:
+            return "static stack is full"
+        case .bounds(let e):
+            return "index \(Int(bitPattern: e.index)) out of bounds for count \(Int(bitPattern: e.count))"
+        }
+    }
+}
+
+/// Hoisted implementation of ``Stack/Small/Error``.
+///
+/// - Note: Use ``Stack/Small/Error`` in your code, not this type directly.
+public enum __StackSmallError<Element: ~Copyable>: Swift.Error, Sendable, Equatable {
+    /// An index was out of bounds.
+    case bounds(Bounds)
+
+    /// Bounds violation payload.
+    public struct Bounds: Sendable, Equatable {
+        public let index: Index_Primitives.Index<Element>
+        public let count: Index_Primitives.Index<Element>.Count
+
+        @inlinable
+        public init(index: Index_Primitives.Index<Element>, count: Index_Primitives.Index<Element>.Count) {
+            self.index = index
+            self.count = count
+        }
+    }
+}
+
+extension __StackSmallError: CustomStringConvertible {
+    public var description: String {
+        switch self {
+        case .bounds(let e):
+            return "index \(Int(bitPattern: e.index)) out of bounds for count \(Int(bitPattern: e.count))"
+        }
+    }
 }
 
 // MARK: - Typealiases (Nest.Name API)
@@ -55,14 +167,11 @@ public enum __StackStaticError: Swift.Error, Sendable, Equatable {
 extension Stack {
     /// Errors that can occur during unbounded stack operations.
     ///
-    /// For the unbounded `Stack`, only `invalidCapacity` can occur
-    /// (when reserving negative capacity). The stack grows automatically,
-    /// so overflow is impossible.
-    ///
     /// ## Cases
     ///
     /// - ``Stack/Error/invalidCapacity``: The requested capacity is invalid (negative).
-    public typealias Error = __StackError
+    /// - ``Stack/Error/bounds(_:)``: An index was out of bounds.
+    public typealias Error = __StackError<Element>
 }
 
 extension Stack.Bounded {
@@ -72,17 +181,25 @@ extension Stack.Bounded {
     ///
     /// - ``Stack/Bounded/Error/invalidCapacity``: The requested capacity is invalid (negative).
     /// - ``Stack/Bounded/Error/overflow``: The stack is full and cannot accept more elements.
-    public typealias Error = __StackBoundedError
+    /// - ``Stack/Bounded/Error/bounds(_:)``: An index was out of bounds.
+    public typealias Error = __StackBoundedError<Element>
 }
 
 extension Stack.Static {
     /// Errors that can occur during static stack operations.
     ///
-    /// For `Stack.Static`, only `overflow` can occur. The capacity is
-    /// fixed at compile time, so `invalidCapacity` is impossible.
-    ///
     /// ## Cases
     ///
     /// - ``Stack/Static/Error/overflow``: The stack is full and cannot accept more elements.
-    public typealias Error = __StackStaticError
+    /// - ``Stack/Static/Error/bounds(_:)``: An index was out of bounds.
+    public typealias Error = __StackStaticError<Element>
+}
+
+extension Stack.Small {
+    /// Errors that can occur during small stack operations.
+    ///
+    /// ## Cases
+    ///
+    /// - ``Stack/Small/Error/bounds(_:)``: An index was out of bounds.
+    public typealias Error = __StackSmallError<Element>
 }

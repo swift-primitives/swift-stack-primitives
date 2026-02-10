@@ -154,6 +154,24 @@ extension Stack.Small where Element: ~Copyable {
         return body(_buffer[typedIndex])
     }
 
+    /// Provides access to the element at the given typed index via closure, with typed error on bounds failure.
+    ///
+    /// - Parameters:
+    ///   - index: The typed index of the element.
+    ///   - body: A closure that receives a borrowed reference to the element.
+    /// - Returns: The value returned by the closure.
+    /// - Throws: ``Stack/Small/Error/bounds(_:)`` if the index is out of bounds.
+    @inlinable
+    public func withElement<R>(
+        at index: Stack<Element>.Index,
+        _ body: (borrowing Element) throws(__StackSmallError<Element>) -> R
+    ) throws(__StackSmallError<Element>) -> R {
+        guard index < _buffer.count else {
+            throw .bounds(.init(index: index, count: _buffer.count))
+        }
+        return try body(_buffer[index])
+    }
+
     /// Provides mutable access to the element at the given index via closure.
     ///
     /// - Parameters:

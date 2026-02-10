@@ -38,7 +38,7 @@ struct StackBoundedTests {
 
     @Test("Initialize with negative capacity throws")
     func initializeWithNegativeCapacity() {
-        #expect(throws: __StackBoundedError.invalidCapacity) {
+        #expect(throws: __StackBoundedError<Int>.invalidCapacity) {
             _ = try Stack<Int>.Bounded(capacity: -1)
         }
     }
@@ -82,7 +82,7 @@ struct StackBoundedTests {
         try stack.push(2)
         #expect(stack.isFull == true)
 
-        #expect(throws: __StackBoundedError.overflow) {
+        #expect(throws: __StackBoundedError<Int>.overflow) {
             try stack.push(3)
         }
     }
@@ -172,7 +172,7 @@ struct StackTests {
 
     @Test("Initialize with negative reserved capacity throws")
     func initializeWithNegativeReservedCapacity() {
-        #expect(throws: __StackError.invalidCapacity) {
+        #expect(throws: __StackError<Int>.invalidCapacity) {
             _ = try Stack<Int>(reservingCapacity: -1)
         }
     }
@@ -480,7 +480,7 @@ struct StackStaticTests {
         try stack.push(2)
         #expect(stack.isFull == true)
 
-        #expect(throws: __StackStaticError.overflow) {
+        #expect(throws: __StackStaticError<Int>.overflow) {
             try stack.push(3)
         }
     }
@@ -876,7 +876,7 @@ struct StackStaticStressTests {
 
         // Try many overflow attempts
         for _ in 0..<100 {
-            #expect(throws: __StackStaticError.overflow) {
+            #expect(throws: __StackStaticError<Int>.overflow) {
                 try stack.push(999)
             }
         }
