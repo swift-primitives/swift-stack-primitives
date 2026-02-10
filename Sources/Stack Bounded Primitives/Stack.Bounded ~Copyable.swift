@@ -228,11 +228,11 @@ extension Stack.Bounded where Element: ~Copyable {
     @inlinable
     public subscript(index: Stack<Element>.Index) -> Element {
         _read {
-            precondition(index >= .zero && index < _buffer.count, "Index out of bounds")
+            precondition(index < _buffer.count, "Index out of bounds")
             yield _buffer[index]
         }
         _modify {
-            precondition(index >= .zero && index < _buffer.count, "Index out of bounds")
+            precondition(index < _buffer.count, "Index out of bounds")
             yield &_buffer[index]
         }
     }
@@ -246,11 +246,11 @@ extension Stack.Bounded where Element: Copyable {
     @inlinable
     public subscript(index: Stack<Element>.Index) -> Element {
         _read {
-            precondition(index >= .zero && index < _buffer.count, "Index out of bounds")
+            precondition(index < _buffer.count, "Index out of bounds")
             yield _buffer[index]
         }
         _modify {
-            precondition(index >= .zero && index < _buffer.count, "Index out of bounds")
+            precondition(index < _buffer.count, "Index out of bounds")
             yield &_buffer[index]
         }
     }
@@ -265,7 +265,7 @@ extension Stack.Bounded where Element: Copyable {
     /// - Returns: The element at the index, or `nil` if out of bounds.
     @inlinable
     public func element(at index: Stack<Element>.Index) -> Element? {
-        guard index >= .zero && index < _buffer.count else { return nil }
+        guard index < _buffer.count else { return nil }
         return _buffer[index]
     }
 }
