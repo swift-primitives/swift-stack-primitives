@@ -10,6 +10,7 @@
 // ===----------------------------------------------------------------------===//
 
 import Testing
+import Index_Primitives_Test_Support
 
 @testable import Stack_Primitives
 

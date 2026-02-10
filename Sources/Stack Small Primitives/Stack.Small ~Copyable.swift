@@ -208,10 +208,9 @@ extension Stack.Small where Element: ~Copyable {
     /// - Parameter newCount: The maximum number of elements to retain.
     /// - Complexity: O(k) where k is the number of removed elements.
     @inlinable
-    public mutating func truncate(to newCount: Int) {
-        let targetCount = Stack<Element>.Index.Count(clamping: newCount)
-        guard targetCount < _buffer.count else { return }
-        while _buffer.count > targetCount {
+    public mutating func truncate(to newCount: Stack<Element>.Index.Count) {
+        guard newCount < _buffer.count else { return }
+        while _buffer.count > newCount {
             _ = _buffer.removeLast()
         }
     }

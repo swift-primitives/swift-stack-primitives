@@ -197,10 +197,9 @@ extension Stack.Bounded where Element: ~Copyable {
 extension Stack.Bounded where Element: ~Copyable {
     /// Removes elements beyond the specified count.
     @inlinable
-    public mutating func truncate(to newCount: Int) {
-        let targetCount = Stack<Element>.Index.Count(clamping: newCount)
-        guard targetCount < _buffer.count else { return }
-        while _buffer.count > targetCount {
+    public mutating func truncate(to newCount: Stack<Element>.Index.Count) {
+        guard newCount < _buffer.count else { return }
+        while _buffer.count > newCount {
             _ = _buffer.removeLast()
         }
     }
@@ -211,10 +210,9 @@ extension Stack.Bounded where Element: ~Copyable {
 extension Stack.Bounded where Element: Copyable {
     /// Removes elements beyond the specified count (CoW-aware).
     @inlinable
-    public mutating func truncate(to newCount: Int) {
-        let targetCount = Stack<Element>.Index.Count(clamping: newCount)
-        guard targetCount < _buffer.count else { return }
-        while _buffer.count > targetCount {
+    public mutating func truncate(to newCount: Stack<Element>.Index.Count) {
+        guard newCount < _buffer.count else { return }
+        while _buffer.count > newCount {
             _ = _buffer.removeLast()
         }
     }

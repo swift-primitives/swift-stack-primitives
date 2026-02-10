@@ -85,7 +85,10 @@ let package = Package(
         ),
         .testTarget(
             name: "Stack Primitives Tests",
-            dependencies: ["Stack Primitives"]
+            dependencies: [
+                "Stack Primitives",
+                .product(name: "Index Primitives Test Support", package: "swift-index-primitives"),
+            ]
         )
     ],
     swiftLanguageModes: [.v6]
