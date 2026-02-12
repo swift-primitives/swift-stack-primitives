@@ -74,9 +74,7 @@ extension Stack.Bounded where Element: ~Copyable {
     /// - Complexity: O(n) where n is the number of elements.
     @inlinable
     public mutating func clear() {
-        while !_buffer.isEmpty {
-            _ = _buffer.removeLast()
-        }
+        _buffer.removeAll()
     }
 }
 
@@ -183,12 +181,7 @@ extension Stack.Bounded where Element: ~Copyable {
     /// Calls the given closure for each element in the stack.
     @inlinable
     public func forEach(_ body: (borrowing Element) -> Void) {
-        var idx: Stack<Element>.Index = .zero
-        let end = _buffer.count.map(Ordinal.init)
-        while idx < end {
-            body(_buffer[idx])
-            idx += .one
-        }
+        _buffer.forEach(body)
     }
 }
 
@@ -198,10 +191,7 @@ extension Stack.Bounded where Element: ~Copyable {
     /// Removes elements beyond the specified count.
     @inlinable
     public mutating func truncate(to newCount: Stack<Element>.Index.Count) {
-        guard newCount < _buffer.count else { return }
-        while _buffer.count > newCount {
-            _ = _buffer.removeLast()
-        }
+        _buffer.truncate(to: newCount)
     }
 }
 
@@ -211,10 +201,7 @@ extension Stack.Bounded where Element: Copyable {
     /// Removes elements beyond the specified count (CoW-aware).
     @inlinable
     public mutating func truncate(to newCount: Stack<Element>.Index.Count) {
-        guard newCount < _buffer.count else { return }
-        while _buffer.count > newCount {
-            _ = _buffer.removeLast()
-        }
+        _buffer.truncate(to: newCount)
     }
 }
 

@@ -202,7 +202,7 @@ struct StackTests {
         // Push elements and verify capacity grows as needed
         stack.push(1)
         #expect(stack.capacity >= 1)
-        let capacityAfterFirst = Int(bitPattern: stack.capacity)
+        let capacityAfterFirst = Int(clamping: stack.capacity)
 
         // Fill to capacity (if capacity > 1)
         if capacityAfterFirst > 1 {
@@ -210,12 +210,12 @@ struct StackTests {
                 stack.push(i)
             }
         }
-        #expect(Int(bitPattern: stack.count) == capacityAfterFirst)
+        #expect(Int(clamping: stack.count) == capacityAfterFirst)
         #expect(stack.capacity >= stack.count)
         let capacityWhenFull = stack.capacity
 
         // Push beyond capacity - should grow
-        stack.push(Int(bitPattern: capacityWhenFull) + 1)
+        stack.push(Int(clamping: capacityWhenFull) + 1)
         #expect(stack.capacity > capacityWhenFull)
         #expect(stack.capacity >= stack.count)
     }
@@ -530,37 +530,125 @@ struct StackStaticTests {
         #expect(stack.isFull == true)
     }
 
-    @Test("withElement provides read-only indexed access")
-    func withElementProvidesReadOnlyIndexedAccess() throws {
+    @Test("Subscript provides read-only indexed access")
+    func subscriptProvidesReadOnlyIndexedAccess() throws {
         var stack = Stack<Int>.Static<4>()
         try stack.push(1)
         try stack.push(2)
         try stack.push(3)
 
         // Index 0 is bottom, index 2 is top
-        let bottom = stack.withElement(at: 0) { $0 }
-        let middle = stack.withElement(at: 1) { $0 }
-        let top = stack.withElement(at: 2) { $0 }
+        let bottom = stack[0 as Stack<Int>.Index]
+        let middle = stack[1 as Stack<Int>.Index]
+        let top = stack[2 as Stack<Int>.Index]
 
         #expect(bottom == 1)
         #expect(middle == 2)
         #expect(top == 3)
     }
 
-    @Test("withMutableElement provides mutable indexed access")
-    func withMutableElementProvidesMutableIndexedAccess() throws {
+    @Test("Subscript provides mutable indexed access")
+    func subscriptProvidesMutableIndexedAccess() throws {
         var stack = Stack<Int>.Static<4>()
         try stack.push(1)
         try stack.push(2)
         try stack.push(3)
 
-        stack.withMutableElement(at: 0) { $0 = 10 }
-        stack.withMutableElement(at: 1) { $0 = 20 }
-        stack.withMutableElement(at: 2) { $0 = 30 }
+        stack[0 as Stack<Int>.Index] = 10
+        stack[1 as Stack<Int>.Index] = 20
+        stack[2 as Stack<Int>.Index] = 30
 
         #expect(stack.pop() == 30)
         #expect(stack.pop() == 20)
         #expect(stack.pop() == 10)
+    }
+}
+
+// MARK: - Stack.Static Bounded Index Tests
+
+@Suite("Stack.Static Bounded Index")
+struct StackStaticBoundedIndexTests {
+    @Test("Bounded subscript read access")
+    func boundedSubscriptReadAccess() throws {
+        var stack = Stack<Int>.Static<4>()
+        try stack.push(1)
+        try stack.push(2)
+        try stack.push(3)
+
+        let idx: Stack<Int>.Index.Bounded<4> = 0
+        #expect(stack[idx] == 1)
+        let idx1: Stack<Int>.Index.Bounded<4> = 1
+        #expect(stack[idx1] == 2)
+        let idx2: Stack<Int>.Index.Bounded<4> = 2
+        #expect(stack[idx2] == 3)
+    }
+
+    @Test("Bounded subscript write access")
+    func boundedSubscriptWriteAccess() throws {
+        var stack = Stack<Int>.Static<4>()
+        try stack.push(1)
+        try stack.push(2)
+
+        let idx: Stack<Int>.Index.Bounded<4> = 0
+        stack[idx] = 10
+        #expect(stack[idx] == 10)
+        #expect(stack.pop() == 2)
+        #expect(stack.pop() == 10)
+    }
+}
+
+// MARK: - Stack.Static ~Copyable Subscript Tests
+
+@Suite("Stack.Static ~Copyable Subscript")
+struct StackStaticMoveOnlySubscriptTests {
+    struct MoveOnlyValue: ~Copyable {
+        let value: Int
+        init(_ value: Int) { self.value = value }
+    }
+
+    @Test("~Copyable subscript read via borrowing")
+    func moveOnlySubscriptRead() throws {
+        var stack = Stack<MoveOnlyValue>.Static<4>()
+        try stack.push(MoveOnlyValue(42))
+        try stack.push(MoveOnlyValue(99))
+
+        let idx: Stack<MoveOnlyValue>.Index = 0
+        let val = stack[idx].value
+        #expect(val == 42)
+        #expect(stack.count == 2)
+    }
+
+    @Test("~Copyable subscript write via modify")
+    func moveOnlySubscriptWrite() throws {
+        var stack = Stack<MoveOnlyValue>.Static<4>()
+        try stack.push(MoveOnlyValue(1))
+        try stack.push(MoveOnlyValue(2))
+
+        let idx: Stack<MoveOnlyValue>.Index = 0
+        stack[idx] = MoveOnlyValue(10)
+        #expect(stack[idx].value == 10)
+    }
+}
+
+// MARK: - Stack.Small ~Copyable Subscript Tests
+
+@Suite("Stack.Small ~Copyable Subscript")
+struct StackSmallMoveOnlySubscriptTests {
+    struct MoveOnlyValue: ~Copyable {
+        let value: Int
+        init(_ value: Int) { self.value = value }
+    }
+
+    @Test("~Copyable subscript read via borrowing")
+    func moveOnlySubscriptRead() {
+        var stack = Stack<MoveOnlyValue>.Small<4>()
+        stack.push(MoveOnlyValue(42))
+        stack.push(MoveOnlyValue(99))
+
+        let idx: Stack<MoveOnlyValue>.Index = 0
+        let val = stack[idx].value
+        #expect(val == 42)
+        #expect(stack.count == 2)
     }
 }
 
@@ -832,17 +920,19 @@ struct StackStaticStressTests {
         #expect(stack.isEmpty == true)
     }
 
-    @Test("withMutableElement modification stress test")
-    func withMutableElementModificationStress() throws {
+    @Test("Subscript modification stress test")
+    func subscriptModificationStress() throws {
         var stack = Stack<Int>.Static<16>()
 
         for i in 0..<16 {
             try stack.push(i)
         }
 
-        // Modify all elements via withMutableElement
-        for i in 0..<16 {
-            stack.withMutableElement(at: i) { $0 = $0 * 2 }
+        // Modify all elements via subscript
+        var idx: Stack<Int>.Index = 0
+        for _ in 0..<16 {
+            stack[idx] = stack[idx] * 2
+            idx += .one
         }
 
         // Verify modifications in LIFO order
@@ -1034,8 +1124,8 @@ struct StackSmallTests {
         #expect(stack.pop() == 1)
     }
 
-    @Test("Element access from inline storage")
-    func elementAccessFromInlineStorage() {
+    @Test("Subscript access from inline storage")
+    func subscriptAccessFromInlineStorage() {
         var stack = Stack<Int>.Small<4>()
         stack.push(1)
         stack.push(2)
@@ -1043,13 +1133,13 @@ struct StackSmallTests {
 
         #expect(stack.count == 3)
         // Elements are bottom to top: 1, 2, 3
-        #expect(stack.withElement(at: 0) { $0 } == 1)
-        #expect(stack.withElement(at: 1) { $0 } == 2)
-        #expect(stack.withElement(at: 2) { $0 } == 3)
+        #expect(stack[0 as Stack<Int>.Index] == 1)
+        #expect(stack[1 as Stack<Int>.Index] == 2)
+        #expect(stack[2 as Stack<Int>.Index] == 3)
     }
 
-    @Test("Element access from heap storage")
-    func elementAccessFromHeapStorage() {
+    @Test("Subscript access from heap storage")
+    func subscriptAccessFromHeapStorage() {
         var stack = Stack<Int>.Small<2>()
         stack.push(1)
         stack.push(2)
@@ -1057,9 +1147,9 @@ struct StackSmallTests {
 
         #expect(stack.isSpilled == true)
         #expect(stack.count == 3)
-        #expect(stack.withElement(at: 0) { $0 } == 1)
-        #expect(stack.withElement(at: 1) { $0 } == 2)
-        #expect(stack.withElement(at: 2) { $0 } == 3)
+        #expect(stack[0 as Stack<Int>.Index] == 1)
+        #expect(stack[1 as Stack<Int>.Index] == 2)
+        #expect(stack[2 as Stack<Int>.Index] == 3)
     }
 
     @Test("ForEach iteration")

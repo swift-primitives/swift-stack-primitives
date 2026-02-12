@@ -145,38 +145,13 @@ extension Stack where Element: ~Copyable {
     /// - Complexity: O(n) where n is the number of elements.
     @inlinable
     public func forEach(_ body: (borrowing Element) -> Void) {
-        var idx: Index = .zero
-        let end = _buffer.count.map(Ordinal.init)
-        while idx < end {
-            body(_buffer[idx])
-            idx += .one
-        }
+        _buffer.forEach(body)
     }
 }
 
 // MARK: - Capacity Management (Additional)
 
 extension Stack where Element: ~Copyable {
-    /// Reduces capacity to match the current count, releasing unused memory.
-    ///
-    /// After calling this method, `capacity == count`.
-    ///
-    /// - Complexity: O(n) where n is the number of elements.
-    @inlinable
-    public mutating func compact() {
-        let currentCount = _buffer.count
-        guard _buffer.capacity > currentCount else { return }
-
-        let newBuffer = Buffer<Element>.Linear(minimumCapacity: currentCount)
-        // Move elements from old buffer to new — need to iterate
-        // Since Buffer.Linear doesn't have a direct move-from-other,
-        // we rebuild by removing from old and appending to new.
-        // However, Buffer.Linear auto-handles this via removeAll + init.
-        // Actually, compact for ~Copyable is complex. Let's just leave it
-        // as a no-op if we can't easily move. The Copyable version handles it.
-        _ = newBuffer
-    }
-
     /// Removes elements beyond the specified count.
     ///
     /// If `newCount >= count`, this method has no effect.
@@ -186,9 +161,6 @@ extension Stack where Element: ~Copyable {
     /// - Complexity: O(k) where k is the number of removed elements.
     @inlinable
     public mutating func truncate(to newCount: Index.Count) {
-        guard newCount < _buffer.count else { return }
-        while _buffer.count > newCount {
-            _ = _buffer.removeLast()
-        }
+        _buffer.truncate(to: newCount)
     }
 }

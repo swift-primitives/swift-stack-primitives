@@ -27,6 +27,7 @@ let package = Package(
         .package(path: "../swift-collection-primitives"),
         .package(path: "../swift-property-primitives"),
         .package(path: "../swift-sequence-primitives"),
+        .package(path: "../swift-finite-primitives"),
     ],
     targets: [
         // Core types with ~Copyable support (Stack, Static, Small, Bounded structs)
@@ -62,6 +63,7 @@ let package = Package(
                 "Stack Primitives Core",
                 .product(name: "Collection Primitives", package: "swift-collection-primitives"),
                 .product(name: "Sequence Primitives", package: "swift-sequence-primitives"),
+                .product(name: "Finite Primitives", package: "swift-finite-primitives"),
             ]
         ),
         .target(

@@ -34,24 +34,6 @@ extension Stack where Element: ~Copyable {
     }
 }
 
-extension Stack where Element: Copyable {
-    /// Accesses the element at the given typed index with copy-on-write semantics.
-    ///
-    /// - Parameter index: The typed index of the element to access (0 = bottom).
-    /// - Precondition: `index.position` must be in `0..<count`.
-    @inlinable
-    public subscript(index: Index) -> Element {
-        _read {
-            precondition(index < _buffer.count, "Index out of bounds")
-            yield _buffer[index]
-        }
-        _modify {
-            precondition(index < _buffer.count, "Index out of bounds")
-            yield &_buffer[index]
-        }
-    }
-}
-
 // Note: Stack.Bounded subscripts are in Stack Bounded Primitives/Stack.Bounded ~Copyable.swift
 
 // MARK: - Typed Subscript (Stack.Static)

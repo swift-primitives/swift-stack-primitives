@@ -11,6 +11,7 @@
 
 public import Stack_Primitives_Core
 public import Buffer_Linear_Primitives
+internal import Finite_Primitives
 
 // Note: Stack.Static is declared INSIDE the Stack struct body (in Stack.swift)
 // due to a Swift compiler bug where nested types with value generic parameters
@@ -147,12 +148,7 @@ extension Stack.Static where Element: ~Copyable {
     /// - Complexity: O(n) where n is the number of elements.
     @inlinable
     public func forEach(_ body: (borrowing Element) -> Void) {
-        var idx: Stack<Element>.Index = .zero
-        let end = _buffer.count.map(Ordinal.init)
-        while idx < end {
-            body(_buffer[idx])
-            idx += .one
-        }
+        _buffer.forEach(body)
     }
 }
 
@@ -168,33 +164,53 @@ extension Stack.Static where Element: ~Copyable {
     /// - Complexity: O(k) where k is the number of removed elements.
     @inlinable
     public mutating func truncate(to newCount: Stack<Element>.Index.Count) {
-        guard newCount < _buffer.count else { return }
-        while _buffer.count > newCount {
-            _ = _buffer.removeLast()
+        _buffer.truncate(to: newCount)
+    }
+}
+
+// MARK: - Subscript (~Copyable)
+
+extension Stack.Static where Element: ~Copyable {
+    /// Accesses the element at the given typed index.
+    ///
+    /// - Parameter index: The typed index of the element to access (0 = bottom).
+    /// - Precondition: `index` must be in `0..<count`.
+    @inlinable
+    public subscript(index: Stack<Element>.Index) -> Element {
+        _read {
+            precondition(index < _buffer.count, "Index out of bounds")
+            yield _buffer[index]
+        }
+        _modify {
+            precondition(index < _buffer.count, "Index out of bounds")
+            yield &_buffer[index]
+        }
+    }
+
+    /// Accesses the element at a capacity-bounded index.
+    ///
+    /// The bounded index guarantees `index < capacity` at the type level.
+    /// Only the `index < count` check remains as a runtime precondition
+    /// (the slot must be initialized).
+    ///
+    /// - Parameter index: A capacity-bounded index.
+    /// - Precondition: The index must refer to an initialized element (`< count`).
+    @inlinable
+    public subscript(index: Stack<Element>.Index.Bounded<capacity>) -> Element {
+        _read {
+            precondition(Stack<Element>.Index(index) < _buffer.count, "Index out of bounds")
+            yield _buffer[index]
+        }
+        _modify {
+            precondition(Stack<Element>.Index(index) < _buffer.count, "Index out of bounds")
+            yield &_buffer[index]
         }
     }
 }
 
-// MARK: - Element Access
+// MARK: - Element Access (Typed)
 
 extension Stack.Static where Element: ~Copyable {
-    /// Provides access to the element at the given index via closure.
-    ///
-    /// - Parameters:
-    ///   - index: The index of the element (0 = bottom, count-1 = top).
-    ///   - body: A closure that receives a borrowed reference to the element.
-    /// - Returns: The value returned by the closure.
-    /// - Precondition: `index` must be in `0..<count`.
-    @inlinable
-    public func withElement<R>(
-        at index: Int,
-        _ body: (borrowing Element) -> R
-    ) -> R {
-        precondition(index >= 0 && index < Int(bitPattern: _buffer.count), "Index out of bounds")
-        let typedIndex = Stack<Element>.Index(__unchecked: (), Ordinal(UInt(index)))
-        return body(_buffer[typedIndex])
-    }
-
     /// Provides access to the element at the given typed index via closure, with typed error on bounds failure.
     ///
     /// - Parameters:
@@ -211,22 +227,5 @@ extension Stack.Static where Element: ~Copyable {
             throw .bounds(.init(index: index, count: _buffer.count))
         }
         return try body(_buffer[index])
-    }
-
-    /// Provides mutable access to the element at the given index via closure.
-    ///
-    /// - Parameters:
-    ///   - index: The index of the element (0 = bottom, count-1 = top).
-    ///   - body: A closure that receives a mutable reference to the element.
-    /// - Returns: The value returned by the closure.
-    /// - Precondition: `index` must be in `0..<count`.
-    @inlinable
-    public mutating func withMutableElement<R>(
-        at index: Int,
-        _ body: (inout Element) -> R
-    ) -> R {
-        precondition(index >= 0 && index < Int(bitPattern: _buffer.count), "Index out of bounds")
-        let typedIndex = Stack<Element>.Index(__unchecked: (), Ordinal(UInt(index)))
-        return body(&_buffer[typedIndex])
     }
 }

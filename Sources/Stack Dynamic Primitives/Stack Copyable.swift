@@ -102,51 +102,19 @@ extension Stack where Element: Copyable {
 /// This enables `for-in` loops, `map`, `filter`, and other sequence operations.
 /// For `~Copyable` elements, use ``forEach(_:)`` instead.
 extension Stack: Swift.Sequence where Element: Copyable {
-
-    /// An iterator over the elements of a stack.
-    public struct Iterator: IteratorProtocol {
-        @usableFromInline
-        var _elements: [Element]
-
-        @usableFromInline
-        var _position: Int
-
-        @usableFromInline
-        init(elements: [Element]) {
-            self._elements = elements
-            self._position = 0
-        }
-
-        /// Advances to the next element and returns it, or nil if no next element exists.
-        @inlinable
-        public mutating func next() -> Element? {
-            guard _position < _elements.count else { return nil }
-            let result = _elements[_position]
-            _position += 1
-            return result
-        }
-    }
+    public typealias Iterator = Buffer<Element>.Linear.Iterator
 
     /// Returns an iterator over the elements of the stack.
     ///
     /// Elements are yielded from bottom (oldest) to top (newest).
     @inlinable
     public borrowing func makeIterator() -> Iterator {
-        var elements: [Element] = []
-        elements.reserveCapacity(Int(bitPattern: _buffer.count))
-
-        var idx: Index = .zero
-        let end = _buffer.count.map(Ordinal.init)
-        while idx < end {
-            elements.append(_buffer[idx])
-            idx += .one
-        }
-        return Iterator(elements: elements)
+        _buffer.makeIterator()
     }
 
     /// The underestimatedCount for `Sequence` conformance.
     @inlinable
-    public var underestimatedCount: Int { Int(bitPattern: _buffer.count) }
+    public var underestimatedCount: Int { Int(clamping: _buffer.count) }
 }
 
 // MARK: - CoW-aware Capacity Management (Copyable elements)
@@ -186,9 +154,6 @@ extension Stack where Element: Copyable {
     /// - Complexity: O(k) where k is the number of removed elements.
     @inlinable
     public mutating func truncate(to newCount: Index.Count) {
-        guard newCount < _buffer.count else { return }
-        while _buffer.count > newCount {
-            _ = _buffer.removeLast()
-        }
+        _buffer.truncate(to: newCount)
     }
 }
