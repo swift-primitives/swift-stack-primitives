@@ -134,48 +134,6 @@ extension Stack.Small where Element: ~Copyable {
     }
 }
 
-// MARK: - Subscript (~Copyable)
-
-extension Stack.Small where Element: ~Copyable {
-    /// Accesses the element at the given typed index.
-    ///
-    /// - Parameter index: The typed index of the element to access (0 = bottom).
-    /// - Precondition: `index` must be in `0..<count`.
-    @inlinable
-    public subscript(index: Stack<Element>.Index) -> Element {
-        _read {
-            precondition(index < _buffer.count, "Index out of bounds")
-            yield _buffer[index]
-        }
-        _modify {
-            precondition(index < _buffer.count, "Index out of bounds")
-            yield &_buffer[index]
-        }
-    }
-}
-
-// MARK: - Element Access (Typed)
-
-extension Stack.Small where Element: ~Copyable {
-    /// Provides access to the element at the given typed index via closure, with typed error on bounds failure.
-    ///
-    /// - Parameters:
-    ///   - index: The typed index of the element.
-    ///   - body: A closure that receives a borrowed reference to the element.
-    /// - Returns: The value returned by the closure.
-    /// - Throws: ``Stack/Small/Error/bounds(_:)`` if the index is out of bounds.
-    @inlinable
-    public func withElement<R>(
-        at index: Stack<Element>.Index,
-        _ body: (borrowing Element) throws(__StackSmallError<Element>) -> R
-    ) throws(__StackSmallError<Element>) -> R {
-        guard index < _buffer.count else {
-            throw .bounds(.init(index: index, count: _buffer.count))
-        }
-        return try body(_buffer[index])
-    }
-}
-
 // MARK: - Sendable
 
 /// `Stack.Small` is `Sendable` when its elements are `Sendable`.
