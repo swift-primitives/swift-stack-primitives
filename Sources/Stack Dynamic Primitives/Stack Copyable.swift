@@ -11,6 +11,8 @@
 
 public import Stack_Primitives_Core
 public import Buffer_Linear_Primitives
+public import Sequence_Primitives
+public import Property_Primitives
 
 // MARK: - Copy-on-Write (Copyable elements only)
 
@@ -95,29 +97,144 @@ extension Stack where Element: Copyable {
     }
 }
 
-// MARK: - Sequence (Copyable elements only)
+// ============================================================================
+// MARK: - Iterator
+// ============================================================================
 
-/// `Stack` conforms to `Sequence` when `Element` is `Copyable`.
-///
-/// This enables `for-in` loops, `map`, `filter`, and other sequence operations.
-/// For `~Copyable` elements, use ``forEach(_:)`` instead.
-extension Stack: Swift.Sequence where Element: Copyable {
-    public typealias Iterator = Buffer<Element>.Linear.Iterator
+extension Stack where Element: Copyable {
+    /// Pointer-based iterator for Stack.
+    ///
+    /// Zero-copy iteration using typed `Index<Element>` for position tracking.
+    @safe
+    public struct Iterator: Sequence.Iterator.`Protocol`, IteratorProtocol {
+        @usableFromInline
+        let _buffer: Buffer<Element>.Linear
 
+        @usableFromInline
+        let _end: Index.Count
+
+        @usableFromInline
+        var _position: Index
+
+        @usableFromInline
+        init(_buffer: Buffer<Element>.Linear) {
+            self._buffer = _buffer
+            self._end = _buffer.count
+            self._position = .zero
+        }
+
+        @inlinable
+        public mutating func next() -> Element? {
+            guard _position < _end else { return nil }
+            let element = _buffer[_position]
+            _position += .one
+            return element
+        }
+    }
+}
+
+extension Stack.Iterator: @unchecked Sendable where Element: Sendable {}
+
+// ============================================================================
+// MARK: - Sequence.Protocol Conformance
+// ============================================================================
+
+extension Stack: Sequence.`Protocol` where Element: Copyable {
     /// Returns an iterator over the elements of the stack.
     ///
     /// Elements are yielded from bottom (oldest) to top (newest).
     @inlinable
     public borrowing func makeIterator() -> Iterator {
-        _buffer.makeIterator()
+        Iterator(_buffer: _buffer)
     }
 
-    /// The underestimatedCount for `Sequence` conformance.
+    /// Returns the count as the underestimated count since we know the exact size.
+    ///
+    /// This explicit implementation resolves ambiguity between Swift.Sequence
+    /// and Sequence.Protocol+Swift.Sequence default implementation.
     @inlinable
-    public var underestimatedCount: Int { Int(clamping: _buffer.count) }
+    public var underestimatedCount: Int { Int(bitPattern: count) }
 }
 
+// ============================================================================
+// MARK: - Sequence.Clearable Conformance
+// ============================================================================
+
+extension Stack: Sequence.Clearable where Element: Copyable {
+    /// Removes all elements from the stack.
+    ///
+    /// This enables `.forEach.consuming { }` pattern via `Property.View` extension.
+    @inlinable
+    public mutating func removeAll() {
+        clear(keepingCapacity: false)
+    }
+}
+
+// ============================================================================
+// MARK: - Sequence.Drain.Protocol Conformance
+// ============================================================================
+
+extension Stack: Sequence.Drain.`Protocol` where Element: Copyable {
+    /// Drains all elements, passing each to the closure with ownership.
+    ///
+    /// After this method returns, the stack is empty but still usable.
+    /// Elements are drained from bottom (oldest) to top (newest).
+    ///
+    /// - Parameter body: A closure that receives each drained element with ownership.
+    /// - Complexity: O(n) where n is the number of elements.
+    @inlinable
+    public mutating func drain(_ body: (consuming Element) -> Void) {
+        _buffer.ensureUnique()
+        while !_buffer.isEmpty {
+            body(_buffer.removeLast())
+        }
+    }
+}
+
+// ============================================================================
+// MARK: - Drain Property Accessor
+// ============================================================================
+
+extension Stack where Element: Copyable {
+    /// Accessor for drain operations.
+    ///
+    /// Draining removes all elements from the stack, passing each to a closure
+    /// with ownership transferred. The stack survives but is empty after draining.
+    ///
+    /// ```swift
+    /// var stack = Stack<Int>()
+    /// stack.push(1)
+    /// stack.push(2)
+    /// stack.drain { element in
+    ///     print(element)  // ownership transferred
+    /// }
+    /// // stack is now empty but still usable
+    /// stack.push(10)  // OK
+    /// ```
+    public var drain: Property<Sequence.Drain, Stack>.View {
+        mutating _read {
+            yield unsafe Property<Sequence.Drain, Stack>.View(&self)
+        }
+        mutating _modify {
+            var view = unsafe Property<Sequence.Drain, Stack>.View(&self)
+            yield &view
+        }
+    }
+}
+
+// ============================================================================
+// MARK: - Swift.Sequence Conformance
+// ============================================================================
+
+/// `Stack` conforms to `Swift.Sequence` when `Element` is `Copyable`.
+///
+/// This enables `for-in` loops, `map`, `filter`, and other sequence operations.
+/// For `~Copyable` elements, use ``forEach(_:)`` instead.
+extension Stack: Swift.Sequence where Element: Copyable {}
+
+// ============================================================================
 // MARK: - CoW-aware Capacity Management (Copyable elements)
+// ============================================================================
 
 extension Stack where Element: Copyable {
     /// Reduces capacity to match the current count, releasing unused memory (CoW-aware).

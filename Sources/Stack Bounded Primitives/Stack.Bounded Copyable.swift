@@ -10,8 +10,8 @@
 // ===----------------------------------------------------------------------===//
 
 public import Stack_Primitives_Core
-internal import Collection_Primitives
-internal import Sequence_Primitives
+public import Sequence_Primitives
+public import Property_Primitives
 
 // MARK: - Swift.Sequence Conformance
 
@@ -19,18 +19,116 @@ internal import Sequence_Primitives
 ///
 /// This enables `for-in` loops, `map`, `filter`, and other sequence operations.
 /// For `~Copyable` elements, use ``forEach(_:)`` instead.
-extension Stack.Bounded: Swift.Sequence where Element: Copyable {
-    public typealias Iterator = Buffer<Element>.Linear.Bounded.Iterator
+extension Stack.Bounded: Swift.Sequence where Element: Copyable {}
 
+// ============================================================================
+// MARK: - Iterator
+// ============================================================================
+
+extension Stack.Bounded where Element: Copyable {
+    /// Pointer-based iterator for Stack.Bounded.
+    ///
+    /// Zero-copy iteration using typed `Index<Element>` for position tracking.
+    @safe
+    public struct Iterator: Sequence.Iterator.`Protocol`, IteratorProtocol {
+        @usableFromInline
+        let _buffer: Buffer<Element>.Linear.Bounded
+
+        @usableFromInline
+        let _end: Stack<Element>.Index.Count
+
+        @usableFromInline
+        var _position: Stack<Element>.Index
+
+        @usableFromInline
+        init(_buffer: Buffer<Element>.Linear.Bounded) {
+            self._buffer = _buffer
+            self._end = _buffer.count
+            self._position = .zero
+        }
+
+        @inlinable
+        public mutating func next() -> Element? {
+            guard _position < _end else { return nil }
+            let element = _buffer[_position]
+            _position += .one
+            return element
+        }
+    }
+}
+
+extension Stack.Bounded.Iterator: @unchecked Sendable where Element: Sendable {}
+
+// ============================================================================
+// MARK: - Sequence.Protocol Conformance
+// ============================================================================
+
+extension Stack.Bounded: Sequence.`Protocol` where Element: Copyable {
     /// Returns an iterator over the elements of the stack.
     ///
     /// Elements are yielded from bottom (oldest) to top (newest).
     @inlinable
     public borrowing func makeIterator() -> Iterator {
-        _buffer.makeIterator()
+        Iterator(_buffer: _buffer)
     }
 
-    /// The underestimated count for `Sequence` conformance.
+    /// Returns the count as the underestimated count since we know the exact size.
+    ///
+    /// This explicit implementation resolves ambiguity between Swift.Sequence
+    /// and Sequence.Protocol+Swift.Sequence default implementation.
     @inlinable
-    public var underestimatedCount: Int { Int(clamping: _buffer.count) }
+    public var underestimatedCount: Int { Int(bitPattern: count) }
+}
+
+// ============================================================================
+// MARK: - Sequence.Clearable Conformance
+// ============================================================================
+
+extension Stack.Bounded: Sequence.Clearable where Element: Copyable {
+    /// Removes all elements from the stack.
+    ///
+    /// The capacity remains unchanged.
+    /// This enables `.forEach.consuming { }` pattern via `Property.View` extension.
+    @inlinable
+    public mutating func removeAll() {
+        clear()
+    }
+}
+
+// ============================================================================
+// MARK: - Sequence.Drain.Protocol Conformance
+// ============================================================================
+
+extension Stack.Bounded: Sequence.Drain.`Protocol` where Element: Copyable {
+    /// Drains all elements, passing each to the closure with ownership.
+    ///
+    /// After this method returns, the stack is empty but still usable.
+    /// The capacity remains unchanged.
+    ///
+    /// - Parameter body: A closure that receives each drained element with ownership.
+    /// - Complexity: O(n) where n is the number of elements.
+    @inlinable
+    public mutating func drain(_ body: (consuming Element) -> Void) {
+        _buffer.ensureUnique()
+        while !_buffer.isEmpty {
+            body(_buffer.removeLast())
+        }
+    }
+}
+
+// ============================================================================
+// MARK: - Drain Property Accessor
+// ============================================================================
+
+extension Stack.Bounded where Element: Copyable {
+    /// Accessor for drain operations.
+    public var drain: Property<Sequence.Drain, Stack.Bounded>.View {
+        mutating _read {
+            yield unsafe Property<Sequence.Drain, Stack.Bounded>.View(&self)
+        }
+        mutating _modify {
+            var view = unsafe Property<Sequence.Drain, Stack.Bounded>.View(&self)
+            yield &view
+        }
+    }
 }
