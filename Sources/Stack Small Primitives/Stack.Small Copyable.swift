@@ -120,55 +120,18 @@ extension Stack.Small: Sequence.Drain.`Protocol` where Element: Copyable {
 }
 
 // ============================================================================
-// MARK: - Property Accessors
+// MARK: - Drain Property Accessor
 // ============================================================================
 
 extension Stack.Small where Element: Copyable {
     /// Accessor for drain operations.
-    public var drain: Property<Sequence.Drain, Self>.View.Typed<Element>.Valued<inlineCapacity> {
-        mutating _read { yield unsafe .init(&self) }
-        mutating _modify { var view: Property<Sequence.Drain, Self>.View.Typed<Element>.Valued<inlineCapacity> = unsafe .init(&self); yield &view }
-    }
-
-    /// Accessor for forEach operations.
-    public var forEach: Property<Sequence.ForEach, Self>.View.Typed<Element>.Valued<inlineCapacity> {
-        mutating _read { yield unsafe .init(&self) }
-        mutating _modify { var view: Property<Sequence.ForEach, Self>.View.Typed<Element>.Valued<inlineCapacity> = unsafe .init(&self); yield &view }
-    }
-
-    /// Accessor for predicate satisfaction checks.
-    public var satisfies: Property<Sequence.Satisfies, Self>.View.Typed<Element>.Valued<inlineCapacity> {
-        mutating _read { yield unsafe .init(&self) }
-        mutating _modify { var view: Property<Sequence.Satisfies, Self>.View.Typed<Element>.Valued<inlineCapacity> = unsafe .init(&self); yield &view }
-    }
-
-    /// Accessor for finding the first matching element.
-    public var first: Property<Sequence.First, Self>.View.Typed<Element>.Valued<inlineCapacity> {
-        mutating _read { yield unsafe .init(&self) }
-        mutating _modify { var view: Property<Sequence.First, Self>.View.Typed<Element>.Valued<inlineCapacity> = unsafe .init(&self); yield &view }
-    }
-
-    /// Accessor for reduce operations.
-    public var reduce: Property<Sequence.Reduce, Self>.View.Typed<Element>.Valued<inlineCapacity> {
-        mutating _read { yield unsafe .init(&self) }
-        mutating _modify { var view: Property<Sequence.Reduce, Self>.View.Typed<Element>.Valued<inlineCapacity> = unsafe .init(&self); yield &view }
-    }
-
-    /// Accessor for containment checks.
-    public var contains: Property<Sequence.Contains, Self>.View.Typed<Element>.Valued<inlineCapacity> {
-        mutating _read { yield unsafe .init(&self) }
-        mutating _modify { var view: Property<Sequence.Contains, Self>.View.Typed<Element>.Valued<inlineCapacity> = unsafe .init(&self); yield &view }
-    }
-
-    /// Accessor for drop operations.
-    public var drop: Property<Sequence.Drop, Self>.View.Typed<Element>.Valued<inlineCapacity> {
-        mutating _read { yield unsafe .init(&self) }
-        mutating _modify { var view: Property<Sequence.Drop, Self>.View.Typed<Element>.Valued<inlineCapacity> = unsafe .init(&self); yield &view }
-    }
-
-    /// Accessor for prefix operations.
-    public var prefix: Property<Sequence.Prefix, Self>.View.Typed<Element>.Valued<inlineCapacity> {
-        mutating _read { yield unsafe .init(&self) }
-        mutating _modify { var view: Property<Sequence.Prefix, Self>.View.Typed<Element>.Valued<inlineCapacity> = unsafe .init(&self); yield &view }
+    public var drain: Property<Sequence.Drain, Self>.View {
+        mutating _read {
+            yield unsafe Property<Sequence.Drain, Self>.View(&self)
+        }
+        mutating _modify {
+            var view = unsafe Property<Sequence.Drain, Self>.View(&self)
+            yield &view
+        }
     }
 }
