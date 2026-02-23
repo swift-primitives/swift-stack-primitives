@@ -10,6 +10,8 @@
 // ===----------------------------------------------------------------------===//
 
 public import Buffer_Linear_Primitives
+public import Buffer_Linear_Inline_Primitives
+public import Buffer_Linear_Small_Primitives
 
 /// A dynamically-growing LIFO stack supporting move-only elements.
 ///

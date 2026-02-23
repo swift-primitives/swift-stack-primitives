@@ -64,7 +64,7 @@ extension Stack.Bounded where Element: ~Copyable {
         guard !_buffer.isEmpty else {
             return nil
         }
-        return _buffer.removeLast()
+        return _buffer.remove.last()
     }
 
     /// Removes all elements from the stack.
@@ -74,7 +74,7 @@ extension Stack.Bounded where Element: ~Copyable {
     /// - Complexity: O(n) where n is the number of elements.
     @inlinable
     public mutating func clear() {
-        _buffer.removeAll()
+        _buffer.remove.all()
     }
 }
 
@@ -99,13 +99,13 @@ extension Stack.Bounded where Element: Copyable {
         guard !_buffer.isEmpty else {
             return nil
         }
-        return _buffer.removeLast()
+        return _buffer.remove.last()
     }
 
     /// Removes all elements from the stack (CoW-aware).
     @inlinable
     public mutating func clear() {
-        _buffer.removeAll()
+        _buffer.remove.all()
     }
 }
 

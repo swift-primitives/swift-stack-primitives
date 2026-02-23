@@ -12,6 +12,7 @@
 public import Sequence_Primitives
 public import Property_Primitives
 public import Buffer_Linear_Primitives
+public import Buffer_Linear_Small_Primitives
 
 // Note: Stack.Small is unconditionally ~Copyable (inline storage requires deinit),
 // so it cannot conform to Swift.Sequence which requires Copyable.
@@ -113,7 +114,7 @@ extension Stack.Small: Sequence.Drain.`Protocol` where Element: Copyable {
     @inlinable
     public mutating func drain(_ body: (consuming Element) -> Void) {
         while !isEmpty {
-            body(_buffer.removeLast())
+            body(_buffer.remove.last())
         }
     }
 }

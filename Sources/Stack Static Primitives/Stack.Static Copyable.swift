@@ -12,6 +12,7 @@
 public import Sequence_Primitives
 public import Property_Primitives
 public import Buffer_Linear_Primitives
+public import Buffer_Linear_Inline_Primitives
 
 // Note: Stack.Static is unconditionally ~Copyable (inline storage requires deinit),
 // so it cannot conform to Swift.Sequence which requires Copyable.

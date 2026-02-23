@@ -37,6 +37,8 @@ let package = Package(
                 .product(name: "Index Primitives", package: "swift-index-primitives"),
                 .product(name: "Property Primitives", package: "swift-property-primitives"),
                 .product(name: "Buffer Linear Primitives", package: "swift-buffer-primitives"),
+                .product(name: "Buffer Linear Inline Primitives", package: "swift-buffer-primitives"),
+                .product(name: "Buffer Linear Small Primitives", package: "swift-buffer-primitives"),
             ]
         ),
         // Per-variant modules: Protocol conformances (Element: Copyable)
@@ -61,6 +63,7 @@ let package = Package(
             name: "Stack Static Primitives",  // Fixed-capacity inline stack
             dependencies: [
                 "Stack Primitives Core",
+                .product(name: "Buffer Linear Inline Primitives", package: "swift-buffer-primitives"),
                 .product(name: "Collection Primitives", package: "swift-collection-primitives"),
                 .product(name: "Sequence Primitives", package: "swift-sequence-primitives"),
                 .product(name: "Finite Primitives", package: "swift-finite-primitives"),
@@ -70,6 +73,7 @@ let package = Package(
             name: "Stack Small Primitives",  // Small-buffer optimization stack
             dependencies: [
                 "Stack Primitives Core",
+                .product(name: "Buffer Linear Small Primitives", package: "swift-buffer-primitives"),
                 .product(name: "Collection Primitives", package: "swift-collection-primitives"),
                 .product(name: "Sequence Primitives", package: "swift-sequence-primitives"),
             ]
