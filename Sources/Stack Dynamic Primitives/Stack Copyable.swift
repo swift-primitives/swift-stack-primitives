@@ -191,6 +191,32 @@ extension Stack: Sequence.Drain.`Protocol` where Element: Copyable {
     }
 }
 
+// MARK: - Conditional Drain
+
+extension Stack where Element: Copyable {
+    /// Drains elements in LIFO order while the predicate returns true.
+    ///
+    /// Repeatedly peeks at the top element; if the predicate returns true,
+    /// pops (consumes) the element and passes it to body; if false, stops.
+    /// The stack survives with remaining elements intact.
+    ///
+    /// - Parameters:
+    ///   - predicate: A closure that receives a borrowed reference to the top element.
+    ///     Return `true` to drain it, `false` to stop.
+    ///   - body: A closure that receives each drained element with ownership.
+    /// - Complexity: O(k) where k is the number of elements drained.
+    @inlinable
+    public mutating func drain(
+        while predicate: (borrowing Element) -> Bool,
+        _ body: (consuming Element) -> Void
+    ) {
+        _buffer.ensureUnique()
+        while let element = peek(), predicate(element) {
+            body(pop()!)
+        }
+    }
+}
+
 // ============================================================================
 // MARK: - Drain Property Accessor
 // ============================================================================

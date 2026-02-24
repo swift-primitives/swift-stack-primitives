@@ -116,6 +116,22 @@ extension Stack.Bounded: Sequence.Drain.`Protocol` where Element: Copyable {
     }
 }
 
+// MARK: - Conditional Drain
+
+extension Stack.Bounded where Element: Copyable {
+    /// Drains elements in LIFO order while the predicate returns true.
+    @inlinable
+    public mutating func drain(
+        while predicate: (borrowing Element) -> Bool,
+        _ body: (consuming Element) -> Void
+    ) {
+        _buffer.ensureUnique()
+        while let element = peek(), predicate(element) {
+            body(pop()!)
+        }
+    }
+}
+
 // ============================================================================
 // MARK: - Drain Property Accessor
 // ============================================================================

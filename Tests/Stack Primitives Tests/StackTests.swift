@@ -1075,3 +1075,230 @@ struct StackSmallMoveOnlyTests {
         #expect(stack.count == 0)
     }
 }
+
+// MARK: - drain(while:_:) Tests
+
+@Suite("Stack drain(while:_:)")
+struct StackDrainWhileTests {
+    @Test("Drains some elements in LIFO order")
+    func drainWhileSome() {
+        var stack = Stack<Int>()
+        for e in [1, 2, 3, 4, 5] { stack.push(e) }
+        // Stack top is 5, then 4, 3, 2, 1
+        var drained: [Int] = []
+        stack.drain(while: { $0 > 3 }) { drained.append($0) }
+        #expect(drained == [5, 4])
+        #expect(Int(bitPattern: stack.count) == 3)
+    }
+
+    @Test("Drains zero elements")
+    func drainWhileNone() {
+        var stack = Stack<Int>()
+        for e in [1, 2, 3] { stack.push(e) }
+        var drained: [Int] = []
+        stack.drain(while: { $0 > 100 }) { drained.append($0) }
+        #expect(drained.isEmpty)
+        #expect(Int(bitPattern: stack.count) == 3)
+    }
+
+    @Test("Drains all elements")
+    func drainWhileAll() {
+        var stack = Stack<Int>()
+        for e in [1, 2, 3] { stack.push(e) }
+        var drained: [Int] = []
+        stack.drain(while: { _ in true }) { drained.append($0) }
+        #expect(drained == [3, 2, 1])
+        #expect(stack.isEmpty)
+    }
+
+    @Test("Drain on empty stack")
+    func drainWhileEmpty() {
+        var stack = Stack<Int>()
+        var drained: [Int] = []
+        stack.drain(while: { _ in true }) { drained.append($0) }
+        #expect(drained.isEmpty)
+    }
+
+    @Test("Remaining elements intact after partial drain")
+    func remainingIntact() {
+        var stack = Stack<Int>()
+        for e in [1, 2, 3, 4, 5] { stack.push(e) }
+        stack.drain(while: { $0 > 3 }) { _ in }
+        // Remaining: 3, 2, 1 (top to bottom)
+        #expect(stack.peek() == 3)
+        #expect(stack.pop() == 3)
+        #expect(stack.pop() == 2)
+        #expect(stack.pop() == 1)
+        #expect(stack.isEmpty)
+    }
+}
+
+@Suite("Stack.Bounded drain(while:_:)")
+struct StackBoundedDrainWhileTests {
+    @Test("Drains some elements in LIFO order")
+    func drainWhileSome() throws {
+        var stack = Stack<Int>.Bounded(capacity: 10)
+        for e in [1, 2, 3, 4, 5] { try stack.push(e) }
+        var drained: [Int] = []
+        stack.drain(while: { $0 > 3 }) { drained.append($0) }
+        #expect(drained == [5, 4])
+        #expect(Int(bitPattern: stack.count) == 3)
+    }
+
+    @Test("Drains zero elements")
+    func drainWhileNone() throws {
+        var stack = Stack<Int>.Bounded(capacity: 10)
+        for e in [1, 2, 3] { try stack.push(e) }
+        var drained: [Int] = []
+        stack.drain(while: { $0 > 100 }) { drained.append($0) }
+        #expect(drained.isEmpty)
+        #expect(Int(bitPattern: stack.count) == 3)
+    }
+
+    @Test("Drains all elements")
+    func drainWhileAll() throws {
+        var stack = Stack<Int>.Bounded(capacity: 10)
+        for e in [1, 2, 3] { try stack.push(e) }
+        var drained: [Int] = []
+        stack.drain(while: { _ in true }) { drained.append($0) }
+        #expect(drained == [3, 2, 1])
+        #expect(stack.isEmpty)
+    }
+
+    @Test("Drain on empty stack")
+    func drainWhileEmpty() {
+        var stack = Stack<Int>.Bounded(capacity: 10)
+        var drained: [Int] = []
+        stack.drain(while: { _ in true }) { drained.append($0) }
+        #expect(drained.isEmpty)
+    }
+
+    @Test("Remaining elements intact after partial drain")
+    func remainingIntact() throws {
+        var stack = Stack<Int>.Bounded(capacity: 10)
+        for e in [1, 2, 3, 4, 5] { try stack.push(e) }
+        stack.drain(while: { $0 > 3 }) { _ in }
+        #expect(stack.peek() == 3)
+        #expect(stack.pop() == 3)
+        #expect(stack.pop() == 2)
+        #expect(stack.pop() == 1)
+        #expect(stack.isEmpty)
+    }
+}
+
+@Suite("Stack.Static drain(while:_:)")
+struct StackStaticDrainWhileTests {
+    @Test("Drains some elements in LIFO order")
+    func drainWhileSome() throws {
+        var stack = Stack<Int>.Static<8>()
+        for e in [1, 2, 3, 4, 5] { try stack.push(e) }
+        var drained: [Int] = []
+        stack.drain(while: { $0 > 3 }) { drained.append($0) }
+        #expect(drained == [5, 4])
+        #expect(Int(bitPattern: stack.count) == 3)
+    }
+
+    @Test("Drains zero elements")
+    func drainWhileNone() throws {
+        var stack = Stack<Int>.Static<8>()
+        for e in [1, 2, 3] { try stack.push(e) }
+        var drained: [Int] = []
+        stack.drain(while: { $0 > 100 }) { drained.append($0) }
+        #expect(drained.isEmpty)
+        #expect(Int(bitPattern: stack.count) == 3)
+    }
+
+    @Test("Drains all elements")
+    func drainWhileAll() throws {
+        var stack = Stack<Int>.Static<8>()
+        for e in [1, 2, 3] { try stack.push(e) }
+        var drained: [Int] = []
+        stack.drain(while: { _ in true }) { drained.append($0) }
+        #expect(drained == [3, 2, 1])
+        #expect(stack.isEmpty == true)
+    }
+
+    @Test("Drain on empty stack")
+    func drainWhileEmpty() {
+        var stack = Stack<Int>.Static<8>()
+        var drained: [Int] = []
+        stack.drain(while: { _ in true }) { drained.append($0) }
+        #expect(drained.isEmpty)
+    }
+
+    @Test("Remaining elements intact after partial drain")
+    func remainingIntact() throws {
+        var stack = Stack<Int>.Static<8>()
+        for e in [1, 2, 3, 4, 5] { try stack.push(e) }
+        stack.drain(while: { $0 > 3 }) { _ in }
+        #expect(stack.peek() == 3)
+        #expect(stack.pop() == 3)
+        #expect(stack.pop() == 2)
+        #expect(stack.pop() == 1)
+        #expect(stack.isEmpty == true)
+    }
+}
+
+@Suite("Stack.Small drain(while:_:)")
+struct StackSmallDrainWhileTests {
+    @Test("Drains some elements in LIFO order (inline)")
+    func drainWhileSomeInline() {
+        var stack = Stack<Int>.Small<8>()
+        for e in [1, 2, 3, 4, 5] { stack.push(e) }
+        var drained: [Int] = []
+        stack.drain(while: { $0 > 3 }) { drained.append($0) }
+        #expect(drained == [5, 4])
+        #expect(Int(bitPattern: stack.count) == 3)
+    }
+
+    @Test("Drains some elements in LIFO order (spilled)")
+    func drainWhileSomeSpilled() {
+        var stack = Stack<Int>.Small<2>()
+        for e in [1, 2, 3, 4, 5] { stack.push(e) }
+        #expect(stack.isSpilled == true)
+        var drained: [Int] = []
+        stack.drain(while: { $0 > 3 }) { drained.append($0) }
+        #expect(drained == [5, 4])
+        #expect(Int(bitPattern: stack.count) == 3)
+    }
+
+    @Test("Drains zero elements")
+    func drainWhileNone() {
+        var stack = Stack<Int>.Small<8>()
+        for e in [1, 2, 3] { stack.push(e) }
+        var drained: [Int] = []
+        stack.drain(while: { $0 > 100 }) { drained.append($0) }
+        #expect(drained.isEmpty)
+        #expect(Int(bitPattern: stack.count) == 3)
+    }
+
+    @Test("Drains all elements")
+    func drainWhileAll() {
+        var stack = Stack<Int>.Small<8>()
+        for e in [1, 2, 3] { stack.push(e) }
+        var drained: [Int] = []
+        stack.drain(while: { _ in true }) { drained.append($0) }
+        #expect(drained == [3, 2, 1])
+        #expect(stack.isEmpty == true)
+    }
+
+    @Test("Drain on empty stack")
+    func drainWhileEmpty() {
+        var stack = Stack<Int>.Small<8>()
+        var drained: [Int] = []
+        stack.drain(while: { _ in true }) { drained.append($0) }
+        #expect(drained.isEmpty)
+    }
+
+    @Test("Remaining elements intact after partial drain")
+    func remainingIntact() {
+        var stack = Stack<Int>.Small<8>()
+        for e in [1, 2, 3, 4, 5] { stack.push(e) }
+        stack.drain(while: { $0 > 3 }) { _ in }
+        #expect(stack.peek() == 3)
+        #expect(stack.pop() == 3)
+        #expect(stack.pop() == 2)
+        #expect(stack.pop() == 1)
+        #expect(stack.isEmpty == true)
+    }
+}
