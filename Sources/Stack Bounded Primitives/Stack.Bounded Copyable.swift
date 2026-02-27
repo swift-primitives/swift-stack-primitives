@@ -26,50 +26,27 @@ extension Stack.Bounded: Swift.Sequence where Element: Copyable {}
 // ============================================================================
 
 extension Stack.Bounded where Element: Copyable {
-    /// Pointer-based iterator for Stack.Bounded.
-    ///
-    /// Zero-copy iteration using typed `Index<Element>` for position tracking.
+    /// Iterator for Stack.Bounded that delegates to Buffer.Linear.Bounded.Iterator.
     @safe
     public struct Iterator: Sequence.Iterator.`Protocol`, IteratorProtocol {
         @usableFromInline
-        let _buffer: Buffer<Element>.Linear.Bounded
+        var _inner: Buffer<Element>.Linear.Bounded.Iterator
 
         @usableFromInline
-        let _end: Stack<Element>.Index.Count
-
-        @usableFromInline
-        var _position: Stack<Element>.Index
-
-        @usableFromInline
-        var _spanBuffer: [Element] = []
-
-        @usableFromInline
-        init(_buffer: Buffer<Element>.Linear.Bounded) {
-            self._buffer = _buffer
-            self._end = _buffer.count
-            self._position = .zero
+        init(_inner: Buffer<Element>.Linear.Bounded.Iterator) {
+            self._inner = _inner
         }
 
         @_lifetime(&self)
         @inlinable
         public mutating func nextSpan(maximumCount: Cardinal) -> Span<Element> {
-            _spanBuffer.removeAll(keepingCapacity: true)
-            var remaining = Int(maximumCount.rawValue)
-            while remaining > 0, _position < _end {
-                _spanBuffer.append(_buffer[_position])
-                _position += .one
-                remaining -= 1
-            }
-            return _spanBuffer.span
+            _inner.nextSpan(maximumCount: maximumCount)
         }
 
         @_lifetime(self: immortal)
         @inlinable
         public mutating func next() -> Element? {
-            guard _position < _end else { return nil }
-            let element = _buffer[_position]
-            _position += .one
-            return element
+            _inner.next()
         }
     }
 }
@@ -86,7 +63,7 @@ extension Stack.Bounded: Sequence.`Protocol` where Element: Copyable {
     /// Elements are yielded from bottom (oldest) to top (newest).
     @inlinable
     public borrowing func makeIterator() -> Iterator {
-        Iterator(_buffer: _buffer)
+        Iterator(_inner: _buffer.makeIterator())
     }
 
     /// Returns the count as the underestimated count since we know the exact size.
