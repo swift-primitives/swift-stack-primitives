@@ -9,11 +9,6 @@ applies_to: [swift-stack-primitives]
 normative: false
 ---
 -->
-
-@Metadata {
-    @TitleHeading("Stack Primitives")
-}
-
 Design decisions, implementation patterns, and lessons learned specific to this package.
 
 ## Overview
@@ -335,8 +330,6 @@ Every path that replaces `_storage` should be followed by `_cachedPtr = _storage
 
 ---
 
-## Topics
+## Related
 
-### Related Documents
-
-- <doc:Stack>
+- Stack

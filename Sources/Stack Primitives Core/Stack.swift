@@ -236,7 +236,7 @@ public struct Stack<Element: ~Copyable>: ~Copyable {
         self._buffer = Buffer<Element>.Linear(minimumCapacity: .zero)
     }
 
-    // Note: init(_ elements: Sequence) is in Stack Dynamic Primitives
+    // Note: init(_ elementS: Swift.Sequence) is in Stack Dynamic Primitives
     // because it requires push() which is defined there.
 
     /// Creates a stack with reserved capacity.
