@@ -1,4 +1,11 @@
 # Conditional Copyability in Swift: A Unified Architecture for Move-Only and Value-Semantic Container Types
+<!--
+---
+version: 1.0.0
+last_updated: 2026-01-20
+status: IMPLEMENTED
+---
+-->
 
 **Authors:** Swift Institute Research
 **Date:** January 2026

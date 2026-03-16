@@ -1,4 +1,11 @@
 # Comparative Analysis: swift-stack-primitives vs Industry Stack Implementations
+<!--
+---
+version: 1.0.0
+last_updated: 2026-03-16
+status: RECOMMENDATION
+---
+-->
 
 ## Executive Summary
 
