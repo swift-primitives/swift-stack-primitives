@@ -20,6 +20,10 @@ let package = Package(
             name: "Stack Primitives Core",
             targets: ["Stack Primitives Core"]
         ),
+        .library(
+            name: "Stack Primitives Test Support",
+            targets: ["Stack Primitives Test Support"]
+        ),
     ],
     dependencies: [
         .package(path: "../swift-index-primitives"),
@@ -30,7 +34,8 @@ let package = Package(
         .package(path: "../swift-finite-primitives"),
     ],
     targets: [
-        // Core types with ~Copyable support (Stack, Static, Small, Bounded structs)
+
+        // MARK: - Core
         .target(
             name: "Stack Primitives Core",
             dependencies: [
@@ -41,26 +46,30 @@ let package = Package(
                 .product(name: "Buffer Linear Small Primitives", package: "swift-buffer-primitives"),
             ]
         ),
-        // Per-variant modules: Protocol conformances (Element: Copyable)
-        // Separate modules to avoid constraint poisoning on Core types
+
+        // MARK: - Dynamic
         .target(
-            name: "Stack Dynamic Primitives",  // Base Stack (growable, heap)
+            name: "Stack Dynamic Primitives",
             dependencies: [
                 "Stack Primitives Core",
                 .product(name: "Collection Primitives", package: "swift-collection-primitives"),
                 .product(name: "Sequence Primitives", package: "swift-sequence-primitives"),
             ]
         ),
+
+        // MARK: - Bounded
         .target(
-            name: "Stack Bounded Primitives",  // Fixed-capacity heap stack
+            name: "Stack Bounded Primitives",
             dependencies: [
                 "Stack Primitives Core",
                 .product(name: "Collection Primitives", package: "swift-collection-primitives"),
                 .product(name: "Sequence Primitives", package: "swift-sequence-primitives"),
             ]
         ),
+
+        // MARK: - Static
         .target(
-            name: "Stack Static Primitives",  // Fixed-capacity inline stack
+            name: "Stack Static Primitives",
             dependencies: [
                 "Stack Primitives Core",
                 .product(name: "Buffer Linear Inline Primitives", package: "swift-buffer-primitives"),
@@ -69,8 +78,10 @@ let package = Package(
                 .product(name: "Finite Primitives", package: "swift-finite-primitives"),
             ]
         ),
+
+        // MARK: - Small
         .target(
-            name: "Stack Small Primitives",  // Small-buffer optimization stack
+            name: "Stack Small Primitives",
             dependencies: [
                 "Stack Primitives Core",
                 .product(name: "Buffer Linear Small Primitives", package: "swift-buffer-primitives"),
@@ -78,7 +89,8 @@ let package = Package(
                 .product(name: "Sequence Primitives", package: "swift-sequence-primitives"),
             ]
         ),
-        // Public: Re-exports Core and all variant modules
+
+        // MARK: - Umbrella
         .target(
             name: "Stack Primitives",
             dependencies: [
@@ -89,13 +101,29 @@ let package = Package(
                 "Stack Small Primitives",
             ]
         ),
+
+        // MARK: - Tests
         .testTarget(
             name: "Stack Primitives Tests",
             dependencies: [
                 "Stack Primitives",
                 .product(name: "Index Primitives Test Support", package: "swift-index-primitives"),
             ]
-        )
+        ),
+
+        // MARK: - Test Support
+        .target(
+            name: "Stack Primitives Test Support",
+            dependencies: [
+                "Stack Primitives",
+                .product(name: "Index Primitives Test Support", package: "swift-index-primitives"),
+                .product(name: "Buffer Primitives Test Support", package: "swift-buffer-primitives"),
+                .product(name: "Collection Primitives Test Support", package: "swift-collection-primitives"),
+                .product(name: "Sequence Primitives Test Support", package: "swift-sequence-primitives"),
+                .product(name: "Finite Primitives Test Support", package: "swift-finite-primitives"),
+            ],
+            path: "Tests/Support"
+        ),
     ],
     swiftLanguageModes: [.v6]
 )
