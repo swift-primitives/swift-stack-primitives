@@ -21,6 +21,22 @@ let package = Package(
             targets: ["Stack Primitives Core"]
         ),
         .library(
+            name: "Stack Dynamic Primitives",
+            targets: ["Stack Dynamic Primitives"]
+        ),
+        .library(
+            name: "Stack Bounded Primitives",
+            targets: ["Stack Bounded Primitives"]
+        ),
+        .library(
+            name: "Stack Static Primitives",
+            targets: ["Stack Static Primitives"]
+        ),
+        .library(
+            name: "Stack Small Primitives",
+            targets: ["Stack Small Primitives"]
+        ),
+        .library(
             name: "Stack Primitives Test Support",
             targets: ["Stack Primitives Test Support"]
         ),
