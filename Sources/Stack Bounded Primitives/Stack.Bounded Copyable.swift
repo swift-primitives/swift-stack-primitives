@@ -10,8 +10,8 @@
 // ===----------------------------------------------------------------------===//
 
 public import Stack_Primitives_Core
-public import Sequence_Primitives
-public import Property_Primitives
+internal import Sequence_Primitives
+internal import Property_Primitives
 
 // MARK: - Swift.Sequence Conformance
 

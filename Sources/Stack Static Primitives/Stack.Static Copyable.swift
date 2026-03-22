@@ -10,7 +10,7 @@
 // ===----------------------------------------------------------------------===//
 
 public import Sequence_Primitives
-public import Property_Primitives
+internal import Property_Primitives
 public import Buffer_Linear_Primitives
 public import Buffer_Linear_Inline_Primitives
 

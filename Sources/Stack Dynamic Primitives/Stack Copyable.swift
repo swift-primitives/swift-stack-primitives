@@ -11,8 +11,8 @@
 
 public import Stack_Primitives_Core
 public import Buffer_Linear_Primitives
-public import Sequence_Primitives
-public import Property_Primitives
+internal import Sequence_Primitives
+internal import Property_Primitives
 
 // MARK: - Copy-on-Write (Copyable elements only)
 
