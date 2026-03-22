@@ -21,9 +21,6 @@ extension Stack where Element: ~Copyable {
     /// requiring no heap allocation. The capacity is specified as a compile-time
     /// generic parameter.
     public struct Static<let capacity: Int>: ~Copyable {
-        @usableFromInline
-        package var _buffer: Buffer<Element>.Linear.Inline<capacity>
-
         // WORKAROUND: swiftlang/swift#86652 — @_rawLayout triviality misclassification.
         // Forces compiler to recognize type as non-trivially destructible so deinit executes.
         // COST: 8 bytes overhead per instance.
@@ -31,7 +28,14 @@ extension Stack where Element: ~Copyable {
         //   Build with `public` access under -O. If it passes, remove this field
         //   and the manual cleanup in deinit.
         // TRACKING: swift-buffer-primitives/Research/rawlayout-release-crash-investigation.md
+        //
+        // NOTE: Must be declared BEFORE _buffer. The buffer transitively
+        // contains @_rawLayout storage which must be last in memory layout.
+        // See Storage.Inline for the Swift 6.2.4 IRGen crash details.
         private var _deinitWorkaround: AnyObject? = nil
+
+        @usableFromInline
+        package var _buffer: Buffer<Element>.Linear.Inline<capacity>
 
         /// Creates an empty static stack.
         @inlinable
