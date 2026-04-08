@@ -7,3 +7,4 @@
 | stack-discipline-boundary-analysis.md | Layering audit: what belongs to stack vs buffer | 2026-02-14 | RECOMMENDATION |
 | stack-indexed-access-adt-tension.md | Literature study: should stacks expose indexed access? | 2026-02-14 | RECOMMENDATION |
 | stack-operations-audit.md | Canonical Stack ADT operations completeness audit | 2026-02-16 | RECOMMENDATION |
+| audit.md | Pre-publication dependency-tree audit: multi-type error file (2 `__`-prefixed enums) | 2026-04-08 | LEGACY |
