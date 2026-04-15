@@ -198,7 +198,24 @@ extension Stack.Bounded: Copyable where Element: Copyable {}
 
 /// `Stack` is `Sendable` when its elements are `Sendable`.
 ///
-/// This conformance allows the stack to be transferred between tasks.
-/// However, concurrent mutation requires external synchronization—
-/// the stack itself provides no thread-safety guarantees.
-extension Stack: @unchecked Sendable where Element: Sendable {}
+/// ## Safety Invariant
+///
+/// `Stack` is `~Copyable` (move-only), so at most one owner exists at any point.
+/// Sending across threads is sound because the compiler enforces that the
+/// sender loses access after the move — there is no aliasing to race on.
+/// The internal `Buffer<Element>.Linear` is owned exclusively by the stack
+/// and moves with it.
+///
+/// ## Intended Use
+///
+/// - Transferring a prepared stack to a worker thread.
+/// - Handing off a stack of `~Copyable` resources across actors.
+/// - Actor-owned stacks constructed outside the actor and passed in at init.
+///
+/// ## Non-Goals
+///
+/// - Does not support concurrent access from multiple threads.
+/// - Ownership is single-owner; transfer is one-shot via `consuming` parameter.
+/// - This conformance does not make arbitrary sharing safe — `~Copyable`
+///   prevents aliasing at compile time.
+extension Stack: @unsafe @unchecked Sendable where Element: Sendable {}

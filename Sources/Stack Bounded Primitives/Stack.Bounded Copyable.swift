@@ -50,7 +50,23 @@ extension Stack.Bounded where Element: Copyable {
     }
 }
 
-extension Stack.Bounded.Iterator: @unchecked Sendable where Element: Sendable {}
+/// Sendable conformance for `Stack.Bounded.Iterator`.
+///
+/// ## Safety Invariant
+///
+/// The iterator wraps `Buffer.Linear.Bounded.Iterator` which holds raw
+/// pointers into CoW-backed storage. The iterator is a one-shot transferable
+/// iteration token — sending it across threads transfers ownership of the
+/// iteration state.
+///
+/// ## Intended Use
+///
+/// - Moving an in-progress iteration to another thread for consumption.
+///
+/// ## Non-Goals
+///
+/// - Not shareable; the iterator advances destructively.
+extension Stack.Bounded.Iterator: @unsafe @unchecked Sendable where Element: Sendable {}
 
 // ============================================================================
 // MARK: - Sequence.Protocol Conformance

@@ -135,8 +135,26 @@ extension Stack.Static where Element: ~Copyable {
 
 // MARK: - Sendable
 
-/// `Stack.Static` is `Sendable` when its elements are `Sendable`.
-extension Stack.Static: @unchecked Sendable where Element: Sendable {}
+/// Sendable conformance for `Stack.Static`.
+///
+/// ## Safety Invariant
+///
+/// `Stack.Static` is unconditionally `~Copyable` (inline `@_rawLayout`
+/// storage). Unique ownership ensures cross-thread transfer via move is
+/// race-free; the inline element bytes travel with the struct.
+///
+/// ## Intended Use
+///
+/// - Stack-allocated stack moved from constructor to consumer
+///   without heap allocation.
+/// - Embedded contexts where the compile-time capacity matches a known
+///   workload and the stack crosses one isolation boundary during setup.
+///
+/// ## Non-Goals
+///
+/// - Not a shared buffer — inline storage is tied to one owner at a time.
+/// - No synchronization; mutating access must remain single-threaded.
+extension Stack.Static: @unsafe @unchecked Sendable where Element: Sendable {}
 
 // MARK: - Iteration
 

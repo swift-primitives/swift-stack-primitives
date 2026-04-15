@@ -173,7 +173,26 @@ extension Stack.Bounded where Element: Copyable {
 
 // MARK: - Sendable
 
-extension Stack.Bounded: @unchecked Sendable where Element: Sendable {}
+/// Sendable conformance for `Stack.Bounded`.
+///
+/// ## Safety Invariant
+///
+/// `Stack.Bounded` is `~Copyable`. Single ownership is enforced by the type
+/// system; the fixed-capacity `Buffer<Element>.Linear.Bounded` it owns
+/// transfers with it across isolation boundaries.
+///
+/// ## Intended Use
+///
+/// - Transferring a pre-sized stack to a worker or actor.
+/// - Embedded/real-time contexts where capacity is bounded and the stack is
+///   constructed at startup then moved to its consumer.
+///
+/// ## Non-Goals
+///
+/// - Not a shared concurrent stack — external synchronization required.
+/// - Does not guarantee overflow safety under concurrent push; single-owner
+///   mutation is required.
+extension Stack.Bounded: @unsafe @unchecked Sendable where Element: Sendable {}
 
 // MARK: - Iteration (for ~Copyable elements)
 

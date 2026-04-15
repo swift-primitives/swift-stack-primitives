@@ -137,8 +137,28 @@ extension Stack.Small where Element: ~Copyable {
 
 // MARK: - Sendable
 
-/// `Stack.Small` is `Sendable` when its elements are `Sendable`.
-extension Stack.Small: @unchecked Sendable where Element: Sendable {}
+/// Sendable conformance for `Stack.Small`.
+///
+/// ## Safety Invariant
+///
+/// `Stack.Small` is unconditionally `~Copyable` (inline storage with
+/// automatic heap spill). Unique ownership ensures the move across
+/// threads relinquishes the sender's access; both the inline bytes and
+/// any spilled allocation transfer together.
+///
+/// ## Intended Use
+///
+/// - SmallVec-style stack handed from builder to consumer where
+///   typical workloads fit inline but can spill.
+/// - Transferring small-size-optimized stacks of `~Copyable` elements
+///   without forcing heap allocation for common cases.
+///
+/// ## Non-Goals
+///
+/// - Not safe for concurrent mutation on either the inline or spilled
+///   path; single-owner is the only supported model.
+/// - Spill transitions are not atomic with respect to external observers.
+extension Stack.Small: @unsafe @unchecked Sendable where Element: Sendable {}
 
 // MARK: - Iteration (for ~Copyable elements)
 
