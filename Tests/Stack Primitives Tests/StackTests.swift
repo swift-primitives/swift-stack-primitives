@@ -18,8 +18,8 @@ import Index_Primitives_Test_Support
 
 @Suite("Stack.Bounded")
 struct StackBoundedTests {
-    @Test("Initialize with valid capacity")
-    func initializeWithValidCapacity() {
+    @Test
+    func `Initialize with valid capacity`() {
         let stack = Stack<Int>.Bounded(capacity: 10)
         #expect(stack.capacity == 10)
         #expect(stack.count == 0)
@@ -27,8 +27,8 @@ struct StackBoundedTests {
         #expect(stack.isFull == false)
     }
 
-    @Test("Initialize with zero capacity")
-    func initializeWithZeroCapacity() {
+    @Test
+    func `Initialize with zero capacity`() {
         let stack = Stack<Int>.Bounded(capacity: 0)
         #expect(stack.capacity == 0)
         #expect(stack.count == 0)
@@ -36,8 +36,8 @@ struct StackBoundedTests {
         #expect(stack.isFull == true) // zero capacity is always full
     }
 
-    @Test("Push and pop single element")
-    func pushAndPopSingleElement() throws {
+    @Test
+    func `Push and pop single element`() throws {
         var stack = Stack<Int>.Bounded(capacity: 5)
         try stack.push(42)
         #expect(stack.count == 1)
@@ -49,8 +49,8 @@ struct StackBoundedTests {
         #expect(stack.isEmpty == true)
     }
 
-    @Test("Push and pop multiple elements (LIFO order)")
-    func pushAndPopMultipleElements() throws {
+    @Test
+    func `Push and pop multiple elements (LIFO order)`() throws {
         var stack = Stack<Int>.Bounded(capacity: 5)
         try stack.push(1)
         try stack.push(2)
@@ -62,14 +62,14 @@ struct StackBoundedTests {
         #expect(stack.pop() == nil)
     }
 
-    @Test("Pop from empty stack returns nil")
-    func popFromEmptyStack() {
+    @Test
+    func `Pop from empty stack returns nil`() {
         var stack = Stack<Int>.Bounded(capacity: 5)
         #expect(stack.pop() == nil)
     }
 
-    @Test("Push to full stack throws overflow")
-    func pushToFullStackThrows() throws {
+    @Test
+    func `Push to full stack throws overflow`() throws {
         var stack = Stack<Int>.Bounded(capacity: 2)
         try stack.push(1)
         try stack.push(2)
@@ -80,8 +80,8 @@ struct StackBoundedTests {
         }
     }
 
-    @Test("Peek returns top element without removing")
-    func peekReturnsTopWithoutRemoving() throws {
+    @Test
+    func `Peek returns top element without removing`() throws {
         var stack = Stack<Int>.Bounded(capacity: 5)
         try stack.push(1)
         try stack.push(2)
@@ -94,15 +94,15 @@ struct StackBoundedTests {
         #expect(popped == 2)
     }
 
-    @Test("Peek on empty stack returns nil")
-    func peekOnEmptyStackReturnsNil() {
+    @Test
+    func `Peek on empty stack returns nil`() {
         let stack = Stack<Int>.Bounded(capacity: 5)
         let result = stack.peek { $0 }
         #expect(result == nil)
     }
 
-    @Test("Span provides read-only access")
-    func spanProvidesReadOnlyAccess() throws {
+    @Test
+    func `Span provides read-only access`() throws {
         var stack = Stack<Int>.Bounded(capacity: 5)
         try stack.push(1)
         try stack.push(2)
@@ -115,8 +115,8 @@ struct StackBoundedTests {
         #expect(span[2] == 3) // Top
     }
 
-    @Test("Clear removes all elements")
-    func clearRemovesAllElements() throws {
+    @Test
+    func `Clear removes all elements`() throws {
         var stack = Stack<Int>.Bounded(capacity: 5)
         try stack.push(1)
         try stack.push(2)
@@ -129,8 +129,8 @@ struct StackBoundedTests {
         #expect(stack.capacity == 5) // Capacity unchanged
     }
 
-    @Test("Peek sugar returns top element for Copyable")
-    func peekSugarReturnsCopyableElement() throws {
+    @Test
+    func `Peek sugar returns top element for Copyable`() throws {
         var stack = Stack<Int>.Bounded(capacity: 5)
         try stack.push(1)
         try stack.push(2)
@@ -145,8 +145,8 @@ struct StackBoundedTests {
 
 @Suite("Stack (Unbounded)")
 struct StackTests {
-    @Test("Initialize empty stack")
-    func initializeEmptyStack() {
+    @Test
+    func `Initialize empty stack`() {
         let stack = Stack<Int>()
         #expect(stack.count == 0)
         #expect(stack.isEmpty == true)
@@ -154,8 +154,8 @@ struct StackTests {
         #expect(stack.capacity >= 0)
     }
 
-    @Test("Initialize with reserved capacity")
-    func initializeWithReservedCapacity() {
+    @Test
+    func `Initialize with reserved capacity`() {
         let stack = Stack<Int>(reservingCapacity: 10)
         #expect(stack.count == 0)
         #expect(stack.isEmpty == true)
@@ -163,8 +163,8 @@ struct StackTests {
         #expect(stack.capacity >= 10)
     }
 
-    @Test("Push and pop single element")
-    func pushAndPopSingleElement() {
+    @Test
+    func `Push and pop single element`() {
         var stack = Stack<Int>()
         stack.push(42)
         #expect(stack.count == 1)
@@ -176,8 +176,8 @@ struct StackTests {
         #expect(stack.isEmpty == true)
     }
 
-    @Test("Push and pop multiple elements (LIFO order)")
-    func pushAndPopMultipleElements() {
+    @Test
+    func `Push and pop multiple elements (LIFO order)`() {
         var stack = Stack<Int>()
         stack.push(1)
         stack.push(2)
@@ -189,14 +189,14 @@ struct StackTests {
         #expect(stack.pop() == nil)
     }
 
-    @Test("Pop from empty stack returns nil")
-    func popFromEmptyStack() {
+    @Test
+    func `Pop from empty stack returns nil`() {
         var stack = Stack<Int>()
         #expect(stack.pop() == nil)
     }
 
-    @Test("Growth behavior - capacity grows as needed")
-    func growthBehavior() {
+    @Test
+    func `Growth behavior - capacity grows as needed`() {
         var stack = Stack<Int>()
 
         // Push elements and verify capacity grows as needed
@@ -220,8 +220,8 @@ struct StackTests {
         #expect(stack.capacity >= stack.count)
     }
 
-    @Test("Reserve capacity")
-    func reserveCapacity() {
+    @Test
+    func `Reserve capacity`() {
         var stack = Stack<Int>()
         stack.reserve(100)
         #expect(stack.capacity >= 100)
@@ -237,8 +237,8 @@ struct StackTests {
         #expect(stack.pop() == 1)
     }
 
-    @Test("Peek returns top element without removing")
-    func peekReturnsTopWithoutRemoving() {
+    @Test
+    func `Peek returns top element without removing`() {
         var stack = Stack<Int>()
         stack.push(1)
         stack.push(2)
@@ -251,15 +251,15 @@ struct StackTests {
         #expect(popped == 2)
     }
 
-    @Test("Peek on empty stack returns nil")
-    func peekOnEmptyStackReturnsNil() {
+    @Test
+    func `Peek on empty stack returns nil`() {
         let stack = Stack<Int>()
         let result = stack.peek { $0 }
         #expect(result == nil)
     }
 
-    @Test("Span provides read-only access")
-    func spanProvidesReadOnlyAccess() {
+    @Test
+    func `Span provides read-only access`() {
         var stack = Stack<Int>()
         stack.push(1)
         stack.push(2)
@@ -272,8 +272,8 @@ struct StackTests {
         #expect(span[2] == 3) // Top
     }
 
-    @Test("Many pushes stress test growth")
-    func manyPushesStressTest() {
+    @Test
+    func `Many pushes stress test growth`() {
         var stack = Stack<Int>()
 
         for i in 0..<1000 {
@@ -290,8 +290,8 @@ struct StackTests {
         #expect(stack.isEmpty == true)
     }
 
-    @Test("Clear removes all elements keeping capacity")
-    func clearRemovesAllElementsKeepingCapacity() {
+    @Test
+    func `Clear removes all elements keeping capacity`() {
         var stack = Stack<Int>()
         stack.push(1)
         stack.push(2)
@@ -305,8 +305,8 @@ struct StackTests {
         #expect(stack.capacity == capacityBefore)
     }
 
-    @Test("Clear removes all elements and deallocates")
-    func clearRemovesAllElementsAndDeallocates() {
+    @Test
+    func `Clear removes all elements and deallocates`() {
         var stack = Stack<Int>()
         stack.push(1)
         stack.push(2)
@@ -322,8 +322,8 @@ struct StackTests {
         #expect(stack.capacity <= capacityBefore)
     }
 
-    @Test("Peek sugar returns top element for Copyable")
-    func peekSugarReturnsCopyableElement() {
+    @Test
+    func `Peek sugar returns top element for Copyable`() {
         var stack = Stack<Int>()
         stack.push(1)
         stack.push(2)
@@ -346,8 +346,8 @@ struct MoveOnlyElementTests {
         }
     }
 
-    @Test("Bounded stack with move-only elements")
-    func boundedStackWithMoveOnlyElements() throws {
+    @Test
+    func `Bounded stack with move-only elements`() throws {
         var stack = Stack<MoveOnlyValue>.Bounded(capacity: 5)
         try stack.push(MoveOnlyValue(1))
         try stack.push(MoveOnlyValue(2))
@@ -359,8 +359,8 @@ struct MoveOnlyElementTests {
         }
     }
 
-    @Test("Unbounded stack with move-only elements")
-    func unboundedStackWithMoveOnlyElements() {
+    @Test
+    func `Unbounded stack with move-only elements`() {
         var stack = Stack<MoveOnlyValue>()
         stack.push(MoveOnlyValue(1))
         stack.push(MoveOnlyValue(2))
@@ -373,8 +373,8 @@ struct MoveOnlyElementTests {
         }
     }
 
-    @Test("Unbounded stack growth with move-only elements")
-    func unboundedStackGrowthWithMoveOnlyElements() {
+    @Test
+    func `Unbounded stack growth with move-only elements`() {
         var stack = Stack<MoveOnlyValue>()
 
         // Push enough to trigger growth
@@ -394,8 +394,8 @@ struct MoveOnlyElementTests {
         }
     }
 
-    @Test("Peek with move-only elements uses borrowing")
-    func peekWithMoveOnlyElementsUsesBorrowing() {
+    @Test
+    func `Peek with move-only elements uses borrowing`() {
         var stack = Stack<MoveOnlyValue>()
         stack.push(MoveOnlyValue(42))
 
@@ -419,16 +419,16 @@ struct MoveOnlyElementTests {
 
 @Suite("Stack.Static")
 struct StackStaticTests {
-    @Test("Initialize empty stack")
-    func initializeEmptyStack() {
+    @Test
+    func `Initialize empty stack`() {
         let stack = Stack<Int>.Static<4>()
         #expect(stack.count == 0)
         #expect(stack.isEmpty == true)
         #expect(stack.isFull == false)
     }
 
-    @Test("Push and pop single element")
-    func pushAndPopSingleElement() throws {
+    @Test
+    func `Push and pop single element`() throws {
         var stack = Stack<Int>.Static<4>()
         try stack.push(42)
         #expect(stack.count == 1)
@@ -440,8 +440,8 @@ struct StackStaticTests {
         #expect(stack.isEmpty == true)
     }
 
-    @Test("Push and pop multiple elements (LIFO order)")
-    func pushAndPopMultipleElements() throws {
+    @Test
+    func `Push and pop multiple elements (LIFO order)`() throws {
         var stack = Stack<Int>.Static<4>()
         try stack.push(1)
         try stack.push(2)
@@ -453,14 +453,14 @@ struct StackStaticTests {
         #expect(stack.pop() == nil)
     }
 
-    @Test("Pop from empty stack returns nil")
-    func popFromEmptyStack() {
+    @Test
+    func `Pop from empty stack returns nil`() {
         var stack = Stack<Int>.Static<4>()
         #expect(stack.pop() == nil)
     }
 
-    @Test("Push to full stack throws overflow")
-    func pushToFullStackThrows() throws {
+    @Test
+    func `Push to full stack throws overflow`() throws {
         var stack = Stack<Int>.Static<2>()
         try stack.push(1)
         try stack.push(2)
@@ -471,8 +471,8 @@ struct StackStaticTests {
         }
     }
 
-    @Test("Peek returns top element without removing")
-    func peekReturnsTopWithoutRemoving() throws {
+    @Test
+    func `Peek returns top element without removing`() throws {
         var stack = Stack<Int>.Static<4>()
         try stack.push(1)
         try stack.push(2)
@@ -485,15 +485,15 @@ struct StackStaticTests {
         #expect(popped == 2)
     }
 
-    @Test("Peek on empty stack returns nil")
-    func peekOnEmptyStackReturnsNil() {
+    @Test
+    func `Peek on empty stack returns nil`() {
         let stack = Stack<Int>.Static<4>()
         let result = stack.peek { $0 }
         #expect(result == nil)
     }
 
-    @Test("Peek sugar returns top element for Copyable")
-    func peekSugarReturnsCopyableElement() throws {
+    @Test
+    func `Peek sugar returns top element for Copyable`() throws {
         var stack = Stack<Int>.Static<4>()
         try stack.push(1)
         try stack.push(2)
@@ -503,8 +503,8 @@ struct StackStaticTests {
         #expect(stack.count == 2) // Still has 2 elements
     }
 
-    @Test("Clear removes all elements")
-    func clearRemovesAllElements() throws {
+    @Test
+    func `Clear removes all elements`() throws {
         var stack = Stack<Int>.Static<4>()
         try stack.push(1)
         try stack.push(2)
@@ -516,8 +516,8 @@ struct StackStaticTests {
         #expect(stack.isEmpty == true)
     }
 
-    @Test("Fill to capacity")
-    func fillToCapacity() throws {
+    @Test
+    func `Fill to capacity`() throws {
         var stack = Stack<Int>.Static<4>()
         #expect(stack.isFull == false)
 
@@ -544,8 +544,8 @@ struct StackStaticMoveOnlyTests {
         }
     }
 
-    @Test("Static stack with move-only elements")
-    func staticStackWithMoveOnlyElements() throws {
+    @Test
+    func `Static stack with move-only elements`() throws {
         var stack = Stack<MoveOnlyValue>.Static<4>()
         try stack.push(MoveOnlyValue(1))
         try stack.push(MoveOnlyValue(2))
@@ -557,8 +557,8 @@ struct StackStaticMoveOnlyTests {
         }
     }
 
-    @Test("Peek with move-only elements uses borrowing")
-    func peekWithMoveOnlyElementsUsesBorrowing() throws {
+    @Test
+    func `Peek with move-only elements uses borrowing`() throws {
         var stack = Stack<MoveOnlyValue>.Static<4>()
         try stack.push(MoveOnlyValue(42))
 
@@ -577,8 +577,8 @@ struct StackStaticMoveOnlyTests {
         }
     }
 
-    @Test("Clear with move-only elements")
-    func clearWithMoveOnlyElements() throws {
+    @Test
+    func `Clear with move-only elements`() throws {
         var stack = Stack<MoveOnlyValue>.Static<4>()
         try stack.push(MoveOnlyValue(1))
         try stack.push(MoveOnlyValue(2))
@@ -589,8 +589,8 @@ struct StackStaticMoveOnlyTests {
         #expect(stack.isEmpty == true)
     }
 
-    @Test("Fill and empty cycle with move-only elements")
-    func fillAndEmptyCycleWithMoveOnlyElements() throws {
+    @Test
+    func `Fill and empty cycle with move-only elements`() throws {
         var stack = Stack<MoveOnlyValue>.Static<4>()
 
         // Fill
@@ -634,8 +634,8 @@ struct StackStaticStressTests {
         }
     }
 
-    @Test("Deinit properly cleans up all elements via clear")
-    func deinitProperlyCleanupViaClear() throws {
+    @Test
+    func `Deinit properly cleans up all elements via clear`() throws {
         let tracker = DeinitTracker()
 
         // Create stack and populate it
@@ -653,8 +653,8 @@ struct StackStaticStressTests {
         #expect(tracker.deinitCount == 3)
     }
 
-    @Test("Stack.Bounded deinit test for comparison")
-    func boundedDeinitTest() throws {
+    @Test
+    func `Stack.Bounded deinit test for comparison`() throws {
         let tracker = DeinitTracker()
 
         do {
@@ -669,8 +669,8 @@ struct StackStaticStressTests {
         #expect(tracker.deinitCount == 3)
     }
 
-    @Test("Clear properly deinitializes elements")
-    func clearProperlyDeinitializes() throws {
+    @Test
+    func `Clear properly deinitializes elements`() throws {
         let tracker = DeinitTracker()
         var stack = Stack<TrackedValue>.Static<8>()
 
@@ -687,8 +687,8 @@ struct StackStaticStressTests {
         #expect(stack.count == 1)
     }
 
-    @Test("Pop properly deinitializes moved element")
-    func popProperlyMoves() throws {
+    @Test
+    func `Pop properly deinitializes moved element`() throws {
         let tracker = DeinitTracker()
         var stack = Stack<TrackedValue>.Static<8>()
 
@@ -706,8 +706,8 @@ struct StackStaticStressTests {
         #expect(tracker.deinitCount == 1)
     }
 
-    @Test("Multiple fill-empty cycles stress test")
-    func multipleFillEmptyCycles() throws {
+    @Test
+    func `Multiple fill-empty cycles stress test`() throws {
         let tracker = DeinitTracker()
         var stack = Stack<TrackedValue>.Static<4>()
 
@@ -727,8 +727,8 @@ struct StackStaticStressTests {
         #expect(tracker.deinitCount == 400)
     }
 
-    @Test("Interleaved push-pop stress test")
-    func interleavedPushPop() throws {
+    @Test
+    func `Interleaved push-pop stress test`() throws {
         let tracker = DeinitTracker()
         var stack = Stack<TrackedValue>.Static<16>()
 
@@ -754,8 +754,8 @@ struct StackStaticStressTests {
         #expect(tracker.deinitCount == totalPushed)
     }
 
-    @Test("Large element type stress test")
-    func largeElementTypeStressTest() throws {
+    @Test
+    func `Large element type stress test`() throws {
         // 56 bytes - should fit in 64-byte slot
         struct LargeValue: ~Copyable {
             var a: Int64 = 1
@@ -781,8 +781,8 @@ struct StackStaticStressTests {
         }
     }
 
-    @Test("Partial fill then clear")
-    func partialFillThenClear() throws {
+    @Test
+    func `Partial fill then clear`() throws {
         let tracker = DeinitTracker()
 
         var stack = Stack<TrackedValue>.Static<16>()
@@ -800,8 +800,8 @@ struct StackStaticStressTests {
         #expect(stack.isEmpty == true)
     }
 
-    @Test("Overflow protection stress test")
-    func overflowProtectionStressTest() throws {
+    @Test
+    func `Overflow protection stress test`() throws {
         var stack = Stack<Int>.Static<4>()
 
         // Fill to capacity
@@ -824,8 +824,8 @@ struct StackStaticStressTests {
         #expect(stack.pop() == 0)
     }
 
-    @Test("Empty stack operations stress test")
-    func emptyStackOperationsStressTest() {
+    @Test
+    func `Empty stack operations stress test`() {
         var stack = Stack<Int>.Static<4>()
 
         // Many pops on empty stack
@@ -849,16 +849,16 @@ struct StackStaticStressTests {
 
 @Suite("Stack.Small")
 struct StackSmallTests {
-    @Test("Initialize empty stack")
-    func initializeEmptyStack() {
+    @Test
+    func `Initialize empty stack`() {
         let stack = Stack<Int>.Small<4>()
         #expect(stack.count == 0)
         #expect(stack.isEmpty == true)
         #expect(stack.isSpilled == false)
     }
 
-    @Test("Push and pop within inline capacity")
-    func pushAndPopWithinInlineCapacity() {
+    @Test
+    func `Push and pop within inline capacity`() {
         var stack = Stack<Int>.Small<4>()
         stack.push(1)
         stack.push(2)
@@ -873,8 +873,8 @@ struct StackSmallTests {
         #expect(stack.pop() == nil)
     }
 
-    @Test("Spill to heap when exceeding inline capacity")
-    func spillToHeapWhenExceedingInlineCapacity() {
+    @Test
+    func `Spill to heap when exceeding inline capacity`() {
         var stack = Stack<Int>.Small<4>()
 
         // Fill inline capacity
@@ -905,8 +905,8 @@ struct StackSmallTests {
         #expect(stack.pop() == nil)
     }
 
-    @Test("Peek from inline storage")
-    func peekFromInlineStorage() {
+    @Test
+    func `Peek from inline storage`() {
         var stack = Stack<Int>.Small<4>()
         stack.push(42)
 
@@ -915,8 +915,8 @@ struct StackSmallTests {
         #expect(stack.isSpilled == false)
     }
 
-    @Test("Peek from heap storage")
-    func peekFromHeapStorage() {
+    @Test
+    func `Peek from heap storage`() {
         var stack = Stack<Int>.Small<2>()
         stack.push(1)
         stack.push(2)
@@ -927,8 +927,8 @@ struct StackSmallTests {
         #expect(stack.count == 3)
     }
 
-    @Test("Clear inline storage")
-    func clearInlineStorage() {
+    @Test
+    func `Clear inline storage`() {
         var stack = Stack<Int>.Small<4>()
         stack.push(1)
         stack.push(2)
@@ -940,8 +940,8 @@ struct StackSmallTests {
         #expect(stack.isSpilled == false)
     }
 
-    @Test("Clear heap storage")
-    func clearHeapStorage() {
+    @Test
+    func `Clear heap storage`() {
         var stack = Stack<Int>.Small<2>()
         stack.push(1)
         stack.push(2)
@@ -954,8 +954,8 @@ struct StackSmallTests {
         #expect(stack.isSpilled == false)
     }
 
-    @Test("Truncate within inline storage")
-    func truncateWithinInlineStorage() {
+    @Test
+    func `Truncate within inline storage`() {
         var stack = Stack<Int>.Small<4>()
         stack.push(1)
         stack.push(2)
@@ -968,8 +968,8 @@ struct StackSmallTests {
         #expect(stack.pop() == 1)
     }
 
-    @Test("Truncate within heap storage")
-    func truncateWithinHeapStorage() {
+    @Test
+    func `Truncate within heap storage`() {
         var stack = Stack<Int>.Small<2>()
         stack.push(1)
         stack.push(2)
@@ -983,8 +983,8 @@ struct StackSmallTests {
         #expect(stack.pop() == 1)
     }
 
-    @Test("ForEach iteration")
-    func forEachIteration() {
+    @Test
+    func `ForEach iteration`() {
         var stack = Stack<Int>.Small<4>()
         stack.push(1)
         stack.push(2)
@@ -995,8 +995,8 @@ struct StackSmallTests {
         #expect(sum == 6)
     }
 
-    @Test("Capacity property reflects current state")
-    func capacityReflectsCurrentState() {
+    @Test
+    func `Capacity property reflects current state`() {
         var stack = Stack<Int>.Small<4>()
         #expect(stack.capacity == 4) // Inline capacity
 
@@ -1019,8 +1019,8 @@ struct StackSmallMoveOnlyTests {
         init(_ value: Int) { self.value = value }
     }
 
-    @Test("Push and pop move-only elements within inline capacity")
-    func pushAndPopMoveOnlyWithinInline() {
+    @Test
+    func `Push and pop move-only elements within inline capacity`() {
         var stack = Stack<MoveOnlyValue>.Small<4>()
         stack.push(MoveOnlyValue(1))
         stack.push(MoveOnlyValue(2))
@@ -1038,8 +1038,8 @@ struct StackSmallMoveOnlyTests {
         }
     }
 
-    @Test("Spill move-only elements to heap")
-    func spillMoveOnlyToHeap() {
+    @Test
+    func `Spill move-only elements to heap`() {
         var stack = Stack<MoveOnlyValue>.Small<2>()
         stack.push(MoveOnlyValue(1))
         stack.push(MoveOnlyValue(2))
@@ -1054,8 +1054,8 @@ struct StackSmallMoveOnlyTests {
         }
     }
 
-    @Test("Peek with move-only elements uses borrowing")
-    func peekWithMoveOnlyElementsUsesBorrowing() {
+    @Test
+    func `Peek with move-only elements uses borrowing`() {
         var stack = Stack<MoveOnlyValue>.Small<4>()
         stack.push(MoveOnlyValue(42))
 
@@ -1064,8 +1064,8 @@ struct StackSmallMoveOnlyTests {
         #expect(stack.count == 1)
     }
 
-    @Test("Clear move-only elements")
-    func clearMoveOnlyElements() {
+    @Test
+    func `Clear move-only elements`() {
         var stack = Stack<MoveOnlyValue>.Small<4>()
         stack.push(MoveOnlyValue(1))
         stack.push(MoveOnlyValue(2))
@@ -1080,8 +1080,8 @@ struct StackSmallMoveOnlyTests {
 
 @Suite("Stack drain(while:_:)")
 struct StackDrainWhileTests {
-    @Test("Drains some elements in LIFO order")
-    func drainWhileSome() {
+    @Test
+    func `Drains some elements in LIFO order`() {
         var stack = Stack<Int>()
         for e in [1, 2, 3, 4, 5] { stack.push(e) }
         // Stack top is 5, then 4, 3, 2, 1
@@ -1091,8 +1091,8 @@ struct StackDrainWhileTests {
         #expect(Int(bitPattern: stack.count) == 3)
     }
 
-    @Test("Drains zero elements")
-    func drainWhileNone() {
+    @Test
+    func `Drains zero elements`() {
         var stack = Stack<Int>()
         for e in [1, 2, 3] { stack.push(e) }
         var drained: [Int] = []
@@ -1101,8 +1101,8 @@ struct StackDrainWhileTests {
         #expect(Int(bitPattern: stack.count) == 3)
     }
 
-    @Test("Drains all elements")
-    func drainWhileAll() {
+    @Test
+    func `Drains all elements`() {
         var stack = Stack<Int>()
         for e in [1, 2, 3] { stack.push(e) }
         var drained: [Int] = []
@@ -1111,16 +1111,16 @@ struct StackDrainWhileTests {
         #expect(stack.isEmpty)
     }
 
-    @Test("Drain on empty stack")
-    func drainWhileEmpty() {
+    @Test
+    func `Drain on empty stack`() {
         var stack = Stack<Int>()
         var drained: [Int] = []
         stack.drain(while: { _ in true }) { drained.append($0) }
         #expect(drained.isEmpty)
     }
 
-    @Test("Remaining elements intact after partial drain")
-    func remainingIntact() {
+    @Test
+    func `Remaining elements intact after partial drain`() {
         var stack = Stack<Int>()
         for e in [1, 2, 3, 4, 5] { stack.push(e) }
         stack.drain(while: { $0 > 3 }) { _ in }
@@ -1135,8 +1135,8 @@ struct StackDrainWhileTests {
 
 @Suite("Stack.Bounded drain(while:_:)")
 struct StackBoundedDrainWhileTests {
-    @Test("Drains some elements in LIFO order")
-    func drainWhileSome() throws {
+    @Test
+    func `Drains some elements in LIFO order`() throws {
         var stack = Stack<Int>.Bounded(capacity: 10)
         for e in [1, 2, 3, 4, 5] { try stack.push(e) }
         var drained: [Int] = []
@@ -1145,8 +1145,8 @@ struct StackBoundedDrainWhileTests {
         #expect(Int(bitPattern: stack.count) == 3)
     }
 
-    @Test("Drains zero elements")
-    func drainWhileNone() throws {
+    @Test
+    func `Drains zero elements`() throws {
         var stack = Stack<Int>.Bounded(capacity: 10)
         for e in [1, 2, 3] { try stack.push(e) }
         var drained: [Int] = []
@@ -1155,8 +1155,8 @@ struct StackBoundedDrainWhileTests {
         #expect(Int(bitPattern: stack.count) == 3)
     }
 
-    @Test("Drains all elements")
-    func drainWhileAll() throws {
+    @Test
+    func `Drains all elements`() throws {
         var stack = Stack<Int>.Bounded(capacity: 10)
         for e in [1, 2, 3] { try stack.push(e) }
         var drained: [Int] = []
@@ -1165,16 +1165,16 @@ struct StackBoundedDrainWhileTests {
         #expect(stack.isEmpty)
     }
 
-    @Test("Drain on empty stack")
-    func drainWhileEmpty() {
+    @Test
+    func `Drain on empty stack`() {
         var stack = Stack<Int>.Bounded(capacity: 10)
         var drained: [Int] = []
         stack.drain(while: { _ in true }) { drained.append($0) }
         #expect(drained.isEmpty)
     }
 
-    @Test("Remaining elements intact after partial drain")
-    func remainingIntact() throws {
+    @Test
+    func `Remaining elements intact after partial drain`() throws {
         var stack = Stack<Int>.Bounded(capacity: 10)
         for e in [1, 2, 3, 4, 5] { try stack.push(e) }
         stack.drain(while: { $0 > 3 }) { _ in }
@@ -1188,8 +1188,8 @@ struct StackBoundedDrainWhileTests {
 
 @Suite("Stack.Static drain(while:_:)")
 struct StackStaticDrainWhileTests {
-    @Test("Drains some elements in LIFO order")
-    func drainWhileSome() throws {
+    @Test
+    func `Drains some elements in LIFO order`() throws {
         var stack = Stack<Int>.Static<8>()
         for e in [1, 2, 3, 4, 5] { try stack.push(e) }
         var drained: [Int] = []
@@ -1198,8 +1198,8 @@ struct StackStaticDrainWhileTests {
         #expect(Int(bitPattern: stack.count) == 3)
     }
 
-    @Test("Drains zero elements")
-    func drainWhileNone() throws {
+    @Test
+    func `Drains zero elements`() throws {
         var stack = Stack<Int>.Static<8>()
         for e in [1, 2, 3] { try stack.push(e) }
         var drained: [Int] = []
@@ -1208,8 +1208,8 @@ struct StackStaticDrainWhileTests {
         #expect(Int(bitPattern: stack.count) == 3)
     }
 
-    @Test("Drains all elements")
-    func drainWhileAll() throws {
+    @Test
+    func `Drains all elements`() throws {
         var stack = Stack<Int>.Static<8>()
         for e in [1, 2, 3] { try stack.push(e) }
         var drained: [Int] = []
@@ -1218,16 +1218,16 @@ struct StackStaticDrainWhileTests {
         #expect(stack.isEmpty == true)
     }
 
-    @Test("Drain on empty stack")
-    func drainWhileEmpty() {
+    @Test
+    func `Drain on empty stack`() {
         var stack = Stack<Int>.Static<8>()
         var drained: [Int] = []
         stack.drain(while: { _ in true }) { drained.append($0) }
         #expect(drained.isEmpty)
     }
 
-    @Test("Remaining elements intact after partial drain")
-    func remainingIntact() throws {
+    @Test
+    func `Remaining elements intact after partial drain`() throws {
         var stack = Stack<Int>.Static<8>()
         for e in [1, 2, 3, 4, 5] { try stack.push(e) }
         stack.drain(while: { $0 > 3 }) { _ in }
@@ -1241,8 +1241,8 @@ struct StackStaticDrainWhileTests {
 
 @Suite("Stack.Small drain(while:_:)")
 struct StackSmallDrainWhileTests {
-    @Test("Drains some elements in LIFO order (inline)")
-    func drainWhileSomeInline() {
+    @Test
+    func `Drains some elements in LIFO order (inline)`() {
         var stack = Stack<Int>.Small<8>()
         for e in [1, 2, 3, 4, 5] { stack.push(e) }
         var drained: [Int] = []
@@ -1251,8 +1251,8 @@ struct StackSmallDrainWhileTests {
         #expect(Int(bitPattern: stack.count) == 3)
     }
 
-    @Test("Drains some elements in LIFO order (spilled)")
-    func drainWhileSomeSpilled() {
+    @Test
+    func `Drains some elements in LIFO order (spilled)`() {
         var stack = Stack<Int>.Small<2>()
         for e in [1, 2, 3, 4, 5] { stack.push(e) }
         #expect(stack.isSpilled == true)
@@ -1262,8 +1262,8 @@ struct StackSmallDrainWhileTests {
         #expect(Int(bitPattern: stack.count) == 3)
     }
 
-    @Test("Drains zero elements")
-    func drainWhileNone() {
+    @Test
+    func `Drains zero elements`() {
         var stack = Stack<Int>.Small<8>()
         for e in [1, 2, 3] { stack.push(e) }
         var drained: [Int] = []
@@ -1272,8 +1272,8 @@ struct StackSmallDrainWhileTests {
         #expect(Int(bitPattern: stack.count) == 3)
     }
 
-    @Test("Drains all elements")
-    func drainWhileAll() {
+    @Test
+    func `Drains all elements`() {
         var stack = Stack<Int>.Small<8>()
         for e in [1, 2, 3] { stack.push(e) }
         var drained: [Int] = []
@@ -1282,16 +1282,16 @@ struct StackSmallDrainWhileTests {
         #expect(stack.isEmpty == true)
     }
 
-    @Test("Drain on empty stack")
-    func drainWhileEmpty() {
+    @Test
+    func `Drain on empty stack`() {
         var stack = Stack<Int>.Small<8>()
         var drained: [Int] = []
         stack.drain(while: { _ in true }) { drained.append($0) }
         #expect(drained.isEmpty)
     }
 
-    @Test("Remaining elements intact after partial drain")
-    func remainingIntact() {
+    @Test
+    func `Remaining elements intact after partial drain`() {
         var stack = Stack<Int>.Small<8>()
         for e in [1, 2, 3, 4, 5] { stack.push(e) }
         stack.drain(while: { $0 > 3 }) { _ in }
