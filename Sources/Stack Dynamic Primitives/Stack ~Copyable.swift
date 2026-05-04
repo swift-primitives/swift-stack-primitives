@@ -9,8 +9,8 @@
 //
 // ===----------------------------------------------------------------------===//
 
-public import Stack_Primitives_Core
 public import Buffer_Linear_Primitives
+public import Stack_Primitives_Core
 
 // MARK: - Properties
 

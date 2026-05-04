@@ -9,10 +9,10 @@
 //
 // ===----------------------------------------------------------------------===//
 
-public import Stack_Primitives_Core
-public import Buffer_Linear_Primitives
 public import Buffer_Linear_Inline_Primitives
+public import Buffer_Linear_Primitives
 internal import Finite_Primitives
+public import Stack_Primitives_Core
 
 // Note: Stack.Static is declared INSIDE the Stack struct body (in Stack.swift)
 // due to a Swift compiler bug where nested types with value generic parameters

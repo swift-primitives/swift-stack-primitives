@@ -9,9 +9,9 @@
 //
 // ===----------------------------------------------------------------------===//
 
-public import Stack_Primitives_Core
 public import Buffer_Linear_Primitives
 public import Buffer_Linear_Small_Primitives
+public import Stack_Primitives_Core
 
 // Note: Stack.Small is declared INSIDE the Stack struct body (in Stack.swift)
 // due to a Swift compiler bug where nested types with value generic parameters

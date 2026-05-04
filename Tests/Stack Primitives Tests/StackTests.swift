@@ -9,8 +9,8 @@
 //
 // ===----------------------------------------------------------------------===//
 
-import Testing
 import Index_Primitives_Test_Support
+import Testing
 
 @testable import Stack_Primitives
 
@@ -33,7 +33,7 @@ struct StackBoundedTests {
         #expect(stack.capacity == 0)
         #expect(stack.count == 0)
         #expect(stack.isEmpty == true)
-        #expect(stack.isFull == true) // zero capacity is always full
+        #expect(stack.isFull == true)  // zero capacity is always full
     }
 
     @Test
@@ -88,7 +88,7 @@ struct StackBoundedTests {
 
         let peeked = stack.peek { $0 }
         #expect(peeked == 2)
-        #expect(stack.count == 2) // Still has 2 elements
+        #expect(stack.count == 2)  // Still has 2 elements
 
         let popped = stack.pop()
         #expect(popped == 2)
@@ -110,9 +110,9 @@ struct StackBoundedTests {
 
         let span = stack.span
         #expect(span.count == 3)
-        #expect(span[0] == 1) // Bottom
+        #expect(span[0] == 1)  // Bottom
         #expect(span[1] == 2)
-        #expect(span[2] == 3) // Top
+        #expect(span[2] == 3)  // Top
     }
 
     @Test
@@ -126,7 +126,7 @@ struct StackBoundedTests {
         stack.clear()
         #expect(stack.count == 0)
         #expect(stack.isEmpty == true)
-        #expect(stack.capacity == 5) // Capacity unchanged
+        #expect(stack.capacity == 5)  // Capacity unchanged
     }
 
     @Test
@@ -137,7 +137,7 @@ struct StackBoundedTests {
 
         let peeked: Int? = stack.peek()
         #expect(peeked == 2)
-        #expect(stack.count == 2) // Still has 2 elements
+        #expect(stack.count == 2)  // Still has 2 elements
     }
 }
 
@@ -267,9 +267,9 @@ struct StackTests {
 
         let span = stack.span
         #expect(span.count == 3)
-        #expect(span[0] == 1) // Bottom
+        #expect(span[0] == 1)  // Bottom
         #expect(span[1] == 2)
-        #expect(span[2] == 3) // Top
+        #expect(span[2] == 3)  // Top
     }
 
     @Test
@@ -330,7 +330,7 @@ struct StackTests {
 
         let peeked: Int? = stack.peek()
         #expect(peeked == 2)
-        #expect(stack.count == 2) // Still has 2 elements
+        #expect(stack.count == 2)  // Still has 2 elements
     }
 }
 
@@ -479,7 +479,7 @@ struct StackStaticTests {
 
         let peeked = stack.peek { $0 }
         #expect(peeked == 2)
-        #expect(stack.count == 2) // Still has 2 elements
+        #expect(stack.count == 2)  // Still has 2 elements
 
         let popped = stack.pop()
         #expect(popped == 2)
@@ -500,7 +500,7 @@ struct StackStaticTests {
 
         let peeked: Int? = stack.peek()
         #expect(peeked == 2)
-        #expect(stack.count == 2) // Still has 2 elements
+        #expect(stack.count == 2)  // Still has 2 elements
     }
 
     @Test
@@ -920,7 +920,7 @@ struct StackSmallTests {
         var stack = Stack<Int>.Small<2>()
         stack.push(1)
         stack.push(2)
-        stack.push(3) // Triggers spill
+        stack.push(3)  // Triggers spill
 
         #expect(stack.isSpilled == true)
         #expect(stack.peek() == 3)
@@ -945,7 +945,7 @@ struct StackSmallTests {
         var stack = Stack<Int>.Small<2>()
         stack.push(1)
         stack.push(2)
-        stack.push(3) // Triggers spill
+        stack.push(3)  // Triggers spill
 
         stack.clear()
         #expect(stack.count == 0)
@@ -998,15 +998,15 @@ struct StackSmallTests {
     @Test
     func `Capacity property reflects current state`() {
         var stack = Stack<Int>.Small<4>()
-        #expect(stack.capacity == 4) // Inline capacity
+        #expect(stack.capacity == 4)  // Inline capacity
 
         stack.push(1)
         stack.push(2)
         stack.push(3)
         stack.push(4)
-        stack.push(5) // Spill
+        stack.push(5)  // Spill
 
-        #expect(stack.capacity >= 5) // Heap capacity (at least 5)
+        #expect(stack.capacity >= 5)  // Heap capacity (at least 5)
     }
 }
 
@@ -1043,7 +1043,7 @@ struct StackSmallMoveOnlyTests {
         var stack = Stack<MoveOnlyValue>.Small<2>()
         stack.push(MoveOnlyValue(1))
         stack.push(MoveOnlyValue(2))
-        stack.push(MoveOnlyValue(3)) // Triggers spill
+        stack.push(MoveOnlyValue(3))  // Triggers spill
 
         #expect(stack.isSpilled == true)
 

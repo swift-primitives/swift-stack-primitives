@@ -9,10 +9,10 @@
 //
 // ===----------------------------------------------------------------------===//
 
-public import Sequence_Primitives
-internal import Property_Primitives
 public import Buffer_Linear_Primitives
 public import Buffer_Linear_Small_Primitives
+internal import Property_Primitives
+public import Sequence_Primitives
 
 // Note: Stack.Small is unconditionally ~Copyable (inline storage requires deinit),
 // so it cannot conform to Swift.Sequence which requires Copyable.
