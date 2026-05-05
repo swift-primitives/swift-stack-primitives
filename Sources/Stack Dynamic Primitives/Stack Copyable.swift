@@ -172,7 +172,7 @@ extension Stack: Sequence.`Protocol` where Element: Copyable {
 extension Stack: Sequence.Clearable where Element: Copyable {
     /// Removes all elements from the stack.
     ///
-    /// This enables `.forEach.consuming { }` pattern via `Property.View` extension.
+    /// This enables `.forEach.consuming { }` pattern via `Property.Inout` extension.
     @inlinable
     public mutating func removeAll() {
         clear(keepingCapacity: false)
@@ -246,13 +246,13 @@ extension Stack where Element: Copyable {
     /// // stack is now empty but still usable
     /// stack.push(10)  // OK
     /// ```
-    public var drain: Property<Sequence.Drain, Stack>.View {
+    public var drain: Property<Sequence.Drain, Stack>.Inout {
         mutating _read {
-            yield unsafe Property<Sequence.Drain, Stack>.View(&self)
+            yield Property<Sequence.Drain, Stack>.Inout(&self)
         }
         mutating _modify {
-            var view = unsafe Property<Sequence.Drain, Stack>.View(&self)
-            yield &view
+            var accessor = Property<Sequence.Drain, Stack>.Inout(&self)
+            yield &accessor
         }
     }
 }

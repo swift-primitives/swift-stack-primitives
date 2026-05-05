@@ -97,7 +97,7 @@ extension Stack.Bounded: Sequence.Clearable where Element: Copyable {
     /// Removes all elements from the stack.
     ///
     /// The capacity remains unchanged.
-    /// This enables `.forEach.consuming { }` pattern via `Property.View` extension.
+    /// This enables `.forEach.consuming { }` pattern via `Property.Inout` extension.
     @inlinable
     public mutating func removeAll() {
         clear()
@@ -147,13 +147,13 @@ extension Stack.Bounded where Element: Copyable {
 
 extension Stack.Bounded where Element: Copyable {
     /// Accessor for drain operations.
-    public var drain: Property<Sequence.Drain, Stack.Bounded>.View {
+    public var drain: Property<Sequence.Drain, Stack.Bounded>.Inout {
         mutating _read {
-            yield unsafe Property<Sequence.Drain, Stack.Bounded>.View(&self)
+            yield Property<Sequence.Drain, Stack.Bounded>.Inout(&self)
         }
         mutating _modify {
-            var view = unsafe Property<Sequence.Drain, Stack.Bounded>.View(&self)
-            yield &view
+            var accessor = Property<Sequence.Drain, Stack.Bounded>.Inout(&self)
+            yield &accessor
         }
     }
 }
