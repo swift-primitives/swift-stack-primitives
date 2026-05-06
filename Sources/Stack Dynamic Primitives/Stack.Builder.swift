@@ -197,3 +197,20 @@ extension Stack where Element: ~Copyable {
         self = builder()
     }
 }
+
+// MARK: - Sequence Bulk-Add (Copyable Element only)
+
+extension Stack.Builder where Element: Copyable {
+    /// Bulk-push a Swift.Sequence onto the stack without per-iteration
+    /// allocation. Iteration order = push order; the last element of the
+    /// sequence ends up at the top of the stack.
+    @inlinable
+    public static func buildExpression<S: Swift.Sequence>(_ expression: S) -> Stack<Element>
+    where S.Element == Element {
+        var result = Stack<Element>()
+        for value in expression {
+            result.push(value)
+        }
+        return result
+    }
+}
