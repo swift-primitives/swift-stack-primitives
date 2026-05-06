@@ -28,6 +28,6 @@ extension Stack where Element: ~Copyable {
     /// ## Position Semantics
     ///
     /// Position 0 is the bottom of the stack (oldest element).
-    /// Position `count - 1` is the top (newest element).
+    /// The last position is the top (newest element).
     public typealias Index = Index_Primitives.Index<Element>
 }

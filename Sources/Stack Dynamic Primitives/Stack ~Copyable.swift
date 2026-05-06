@@ -108,7 +108,7 @@ extension Stack where Element: ~Copyable {
 extension Stack where Element: ~Copyable {
     /// A read-only view of the stack's elements.
     ///
-    /// Elements are ordered from bottom (index 0) to top (index count-1).
+    /// Elements are ordered from bottom (index 0) up to the top.
     ///
     /// - Complexity: O(1)
     public var span: Span<Element> {
@@ -122,7 +122,7 @@ extension Stack where Element: ~Copyable {
 
     /// A mutable view of the stack's elements.
     ///
-    /// Elements are ordered from bottom (index 0) to top (index count-1).
+    /// Elements are ordered from bottom (index 0) up to the top.
     /// For Copyable elements, this triggers CoW if needed.
     ///
     /// - Complexity: O(1), O(n) if CoW copy triggered
