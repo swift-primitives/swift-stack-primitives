@@ -78,6 +78,7 @@ let package = Package(
             name: "Stack Bounded Primitives",
             dependencies: [
                 "Stack Primitives Core",
+                "Stack Dynamic Primitives",
                 .product(name: "Collection Primitives", package: "swift-collection-primitives"),
                 .product(name: "Sequence Primitives", package: "swift-sequence-primitives"),
             ]
@@ -88,6 +89,7 @@ let package = Package(
             name: "Stack Static Primitives",
             dependencies: [
                 "Stack Primitives Core",
+                "Stack Dynamic Primitives",
                 .product(name: "Buffer Linear Inline Primitives", package: "swift-buffer-primitives"),
                 .product(name: "Collection Primitives", package: "swift-collection-primitives"),
                 .product(name: "Sequence Primitives", package: "swift-sequence-primitives"),
@@ -100,6 +102,7 @@ let package = Package(
             name: "Stack Small Primitives",
             dependencies: [
                 "Stack Primitives Core",
+                "Stack Dynamic Primitives",
                 .product(name: "Buffer Linear Small Primitives", package: "swift-buffer-primitives"),
                 .product(name: "Collection Primitives", package: "swift-collection-primitives"),
                 .product(name: "Sequence Primitives", package: "swift-sequence-primitives"),

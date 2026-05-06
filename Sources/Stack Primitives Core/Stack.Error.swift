@@ -58,7 +58,7 @@ extension __StackStaticError: CustomStringConvertible {
 
 // MARK: - Typealiases (Nest.Name API)
 
-extension Stack.Bounded {
+extension Stack.Bounded where Element: ~Copyable {
     /// Errors that can occur during bounded stack operations.
     ///
     /// ## Cases
@@ -67,7 +67,7 @@ extension Stack.Bounded {
     public typealias Error = __StackBoundedError<Element>
 }
 
-extension Stack.Static {
+extension Stack.Static where Element: ~Copyable {
     /// Errors that can occur during static stack operations.
     ///
     /// ## Cases
