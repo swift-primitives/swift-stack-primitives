@@ -28,7 +28,7 @@ extension Stack.Bounded where Element: ~Copyable {
     public init(
         capacity: Index<Element>.Count,
         @Stack<Element>.Builder _ builder: () -> Stack<Element>
-    ) throws(Error) {
+    ) throws(Self.Error) {
         var bounded = Stack<Element>.Bounded(capacity: capacity)
         var dynamic = builder()
         while !dynamic._buffer.isEmpty {
