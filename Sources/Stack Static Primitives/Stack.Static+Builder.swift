@@ -28,7 +28,7 @@ extension Stack.Static where Element: ~Copyable {
     /// ```
     public init(
         @Stack<Element>.Builder _ builder: () -> Stack<Element>
-    ) throws(Self.Error) {
+    ) throws(Stack.Static.Error) {
         var dynamic = builder()
         self.init()
         // Drain dynamic from the bottom (oldest pushed first) to preserve push order.
