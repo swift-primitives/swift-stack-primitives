@@ -51,6 +51,9 @@ extension Stack where Element: ~Copyable {
     /// and supports conditional `Copyable` conformance).
     /// Element cleanup is handled by `Storage.Inline`'s deinit (inline path)
     /// or `Storage.Heap`'s deinit (spilled path).
+    // SAFETY: Safe by construction — backing storage uses only stdlib
+    // SAFETY: safe types; `@safe` documents that this type performs no
+    // SAFETY: unsafe operations.
     @safe
     public struct Small<let inlineCapacity: Int>: ~Copyable {
         @usableFromInline

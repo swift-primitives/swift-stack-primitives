@@ -27,6 +27,9 @@ extension Stack.Bounded: Swift.Sequence where Element: Copyable {}
 
 extension Stack.Bounded where Element: Copyable {
     /// Iterator for Stack.Bounded that delegates to Buffer.Linear.Bounded.Iterator.
+    // WHY: Category D — structural Sendable workaround; the type is
+    // WHY: structurally value-safe but the compiler cannot synthesize
+    // WHY: Sendable due to a stored pointer / generic parameter shape.
     @safe
     public struct Iterator: Sequence.Iterator.`Protocol`, IteratorProtocol {
         @usableFromInline

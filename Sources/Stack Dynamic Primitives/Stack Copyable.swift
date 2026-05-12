@@ -104,6 +104,9 @@ extension Stack where Element: Copyable {
 
 extension Stack where Element: Copyable {
     /// Iterator for Stack that delegates to Buffer.Linear.Iterator.
+    // WHY: Category D — structural Sendable workaround; the type is
+    // WHY: structurally value-safe but the compiler cannot synthesize
+    // WHY: Sendable due to a stored pointer / generic parameter shape.
     @safe
     public struct Iterator: Sequence.Iterator.`Protocol`, IteratorProtocol {
         @usableFromInline

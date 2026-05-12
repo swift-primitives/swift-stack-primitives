@@ -71,6 +71,9 @@ internal import Buffer_Linear_Small_Primitives
 /// current capacity (minimum 4) and moves all elements. This provides
 /// O(1) amortized push with approximately 2.0 copies per element over
 /// the stack's lifetime.
+// WHY: Category D — structural Sendable workaround; the type is
+// WHY: structurally value-safe but the compiler cannot synthesize
+// WHY: Sendable due to a stored pointer / generic parameter shape.
 @safe
 public struct Stack<Element: ~Copyable>: ~Copyable {
 
@@ -130,6 +133,9 @@ public struct Stack<Element: ~Copyable>: ~Copyable {
     /// var handles = try Stack<FileHandle>.Bounded(capacity: 5)
     /// try handles.push(FileHandle())
     /// ```
+    // WHY: Category D — structural Sendable workaround; the type is
+    // WHY: structurally value-safe but the compiler cannot synthesize
+    // WHY: Sendable due to a stored pointer / generic parameter shape.
     @safe
     public struct Bounded: ~Copyable {
         @usableFromInline
