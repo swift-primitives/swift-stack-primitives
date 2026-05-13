@@ -69,7 +69,7 @@ extension Stack.Bounded where Element: Copyable {
 /// ## Non-Goals
 ///
 /// - Not shareable; the iterator advances destructively.
-extension Stack.Bounded.Iterator: @unsafe @unchecked Sendable where Element: Sendable {}
+extension Stack.Bounded.Iterator: Sendable where Element: Sendable {}
 
 // ============================================================================
 // MARK: - Sequence.Protocol Conformance

@@ -145,7 +145,7 @@ extension Stack where Element: Copyable {
 /// ## Non-Goals
 ///
 /// - Not shareable; the iterator advances destructively.
-extension Stack.Iterator: @unsafe @unchecked Sendable where Element: Sendable {}
+extension Stack.Iterator: Sendable where Element: Sendable {}
 
 // ============================================================================
 // MARK: - Sequence.Protocol Conformance
