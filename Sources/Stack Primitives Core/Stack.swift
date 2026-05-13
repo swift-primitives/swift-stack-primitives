@@ -224,4 +224,4 @@ extension Stack.Bounded: Copyable where Element: Copyable {}
 /// - Ownership is single-owner; transfer is one-shot via `consuming` parameter.
 /// - This conformance does not make arbitrary sharing safe — `~Copyable`
 ///   prevents aliasing at compile time.
-extension Stack: Sendable where Element: Sendable {}
+extension Stack: @unsafe @unchecked Sendable where Element: Sendable {}
