@@ -12,34 +12,24 @@ let package = Package(
         .visionOS(.v26)
     ],
     products: [
-        .library(
-            name: "Stack Primitives",
-            targets: ["Stack Primitives"]
-        ),
-        .library(
-            name: "Stack Primitives Core",
-            targets: ["Stack Primitives Core"]
-        ),
-        .library(
-            name: "Stack Dynamic Primitives",
-            targets: ["Stack Dynamic Primitives"]
-        ),
-        .library(
-            name: "Stack Bounded Primitives",
-            targets: ["Stack Bounded Primitives"]
-        ),
-        .library(
-            name: "Stack Static Primitives",
-            targets: ["Stack Static Primitives"]
-        ),
-        .library(
-            name: "Stack Small Primitives",
-            targets: ["Stack Small Primitives"]
-        ),
-        .library(
-            name: "Stack Primitives Test Support",
-            targets: ["Stack Primitives Test Support"]
-        ),
+        // MARK: - Base
+        .library(name: "Stack Primitive", targets: ["Stack Primitive"]),
+        .library(name: "Stack Primitives", targets: ["Stack Primitives"]),
+
+        // MARK: - Bounded variant
+        .library(name: "Stack Bounded Primitive", targets: ["Stack Bounded Primitive"]),
+        .library(name: "Stack Bounded Primitives", targets: ["Stack Bounded Primitives"]),
+
+        // MARK: - Static variant
+        .library(name: "Stack Static Primitive", targets: ["Stack Static Primitive"]),
+        .library(name: "Stack Static Primitives", targets: ["Stack Static Primitives"]),
+
+        // MARK: - Small variant
+        .library(name: "Stack Small Primitive", targets: ["Stack Small Primitive"]),
+        .library(name: "Stack Small Primitives", targets: ["Stack Small Primitives"]),
+
+        // MARK: - Test Support
+        .library(name: "Stack Primitives Test Support", targets: ["Stack Primitives Test Support"]),
     ],
     dependencies: [
         .package(url: "https://github.com/swift-primitives/swift-index-primitives.git", branch: "main"),
@@ -48,77 +38,139 @@ let package = Package(
         .package(url: "https://github.com/swift-primitives/swift-collection-primitives.git", branch: "main"),
         .package(url: "https://github.com/swift-primitives/swift-property-primitives.git", branch: "main"),
         .package(url: "https://github.com/swift-primitives/swift-sequence-primitives.git", branch: "main"),
+        .package(url: "https://github.com/swift-primitives/swift-iterator-primitives.git", branch: "main"),
+        .package(url: "https://github.com/swift-primitives/swift-memory-primitives.git", branch: "main"),
+        .package(url: "https://github.com/swift-primitives/swift-memory-iterator-primitives.git", branch: "main"),
+        .package(url: "https://github.com/swift-primitives/swift-ordinal-primitives.git", branch: "main"),
         .package(url: "https://github.com/swift-primitives/swift-finite-primitives.git", branch: "main"),
     ],
     targets: [
 
-        // MARK: - Core
+        // MARK: - Base type (Stack dynamic/heap + Index typealias)
         .target(
-            name: "Stack Primitives Core",
+            name: "Stack Primitive",
             dependencies: [
                 .product(name: "Index Primitives", package: "swift-index-primitives"),
-                .product(name: "Property Primitives", package: "swift-property-primitives"),
+                .product(name: "Buffer Linear Primitive", package: "swift-buffer-linear-primitives"),
                 .product(name: "Buffer Linear Primitives", package: "swift-buffer-linear-primitives"),
+                .product(name: "Memory Contiguous Primitives", package: "swift-memory-primitives"),
+                .product(name: "Ordinal Primitives", package: "swift-ordinal-primitives"),
+            ]
+        ),
+
+        // MARK: - Bounded type
+        .target(
+            name: "Stack Bounded Primitive",
+            dependencies: [
+                "Stack Primitive",
+                .product(name: "Index Primitives", package: "swift-index-primitives"),
+                .product(name: "Buffer Linear Primitive", package: "swift-buffer-linear-primitives"),
+                .product(name: "Buffer Linear Bounded Primitive", package: "swift-buffer-linear-primitives"),
+                .product(name: "Buffer Linear Bounded Primitives", package: "swift-buffer-linear-primitives"),
+                .product(name: "Memory Contiguous Primitives", package: "swift-memory-primitives"),
+                .product(name: "Ordinal Primitives", package: "swift-ordinal-primitives"),
+            ]
+        ),
+
+        // MARK: - Static type
+        .target(
+            name: "Stack Static Primitive",
+            dependencies: [
+                "Stack Primitive",
+                .product(name: "Index Primitives", package: "swift-index-primitives"),
+                .product(name: "Buffer Linear Primitive", package: "swift-buffer-linear-primitives"),
                 .product(name: "Buffer Linear Inline Primitives", package: "swift-buffer-linear-primitives"),
-                .product(name: "Buffer Linear Small Primitives", package: "swift-buffer-linear-primitives"),
-            ]
-        ),
-
-        // MARK: - Dynamic
-        .target(
-            name: "Stack Dynamic Primitives",
-            dependencies: [
-                "Stack Primitives Core",
-                .product(name: "Collection Primitives", package: "swift-collection-primitives"),
-                .product(name: "Sequence Primitives", package: "swift-sequence-primitives"),
-            ]
-        ),
-
-        // MARK: - Bounded
-        .target(
-            name: "Stack Bounded Primitives",
-            dependencies: [
-                "Stack Primitives Core",
-                "Stack Dynamic Primitives",
-                .product(name: "Collection Primitives", package: "swift-collection-primitives"),
-                .product(name: "Sequence Primitives", package: "swift-sequence-primitives"),
-            ]
-        ),
-
-        // MARK: - Static
-        .target(
-            name: "Stack Static Primitives",
-            dependencies: [
-                "Stack Primitives Core",
-                "Stack Dynamic Primitives",
-                .product(name: "Buffer Linear Inline Primitives", package: "swift-buffer-linear-primitives"),
-                .product(name: "Collection Primitives", package: "swift-collection-primitives"),
-                .product(name: "Sequence Primitives", package: "swift-sequence-primitives"),
+                .product(name: "Memory Contiguous Primitives", package: "swift-memory-primitives"),
+                .product(name: "Ordinal Primitives", package: "swift-ordinal-primitives"),
                 .product(name: "Finite Primitives", package: "swift-finite-primitives"),
             ]
         ),
 
-        // MARK: - Small
+        // MARK: - Small type
         .target(
-            name: "Stack Small Primitives",
+            name: "Stack Small Primitive",
             dependencies: [
-                "Stack Primitives Core",
-                "Stack Dynamic Primitives",
+                "Stack Primitive",
+                .product(name: "Index Primitives", package: "swift-index-primitives"),
+                .product(name: "Buffer Linear Primitive", package: "swift-buffer-linear-primitives"),
+                .product(name: "Buffer Linear Small Primitive", package: "swift-buffer-linear-primitives"),
                 .product(name: "Buffer Linear Small Primitives", package: "swift-buffer-linear-primitives"),
-                .product(name: "Collection Primitives", package: "swift-collection-primitives"),
-                .product(name: "Sequence Primitives", package: "swift-sequence-primitives"),
+                .product(name: "Memory Contiguous Primitives", package: "swift-memory-primitives"),
+                .product(name: "Ordinal Primitives", package: "swift-ordinal-primitives"),
             ]
         ),
 
-        // MARK: - Umbrella
+        // MARK: - Bounded ops
+        .target(
+            name: "Stack Bounded Primitives",
+            dependencies: [
+                "Stack Bounded Primitive",
+                "Stack Primitive",
+                .product(name: "Index Primitives", package: "swift-index-primitives"),
+                .product(name: "Buffer Linear Bounded Primitive", package: "swift-buffer-linear-primitives"),
+                .product(name: "Buffer Linear Bounded Primitives", package: "swift-buffer-linear-primitives"),
+                .product(name: "Sequence Primitives", package: "swift-sequence-primitives"),
+                .product(name: "Iterable", package: "swift-iterator-primitives"),
+                .product(name: "Iterator Chunk Primitives", package: "swift-iterator-primitives"),
+                .product(name: "Memory Iterator Primitives", package: "swift-memory-iterator-primitives"),
+                .product(name: "Property Primitives", package: "swift-property-primitives"),
+            ]
+        ),
+
+        // MARK: - Static ops
+        .target(
+            name: "Stack Static Primitives",
+            dependencies: [
+                "Stack Static Primitive",
+                "Stack Primitive",
+                .product(name: "Index Primitives", package: "swift-index-primitives"),
+                .product(name: "Buffer Linear Primitive", package: "swift-buffer-linear-primitives"),
+                .product(name: "Buffer Linear Inline Primitives", package: "swift-buffer-linear-primitives"),
+                .product(name: "Sequence Primitives", package: "swift-sequence-primitives"),
+                .product(name: "Iterable", package: "swift-iterator-primitives"),
+                .product(name: "Iterator Chunk Primitives", package: "swift-iterator-primitives"),
+                .product(name: "Memory Iterator Primitives", package: "swift-memory-iterator-primitives"),
+                .product(name: "Property Primitives", package: "swift-property-primitives"),
+            ]
+        ),
+
+        // MARK: - Small ops
+        .target(
+            name: "Stack Small Primitives",
+            dependencies: [
+                "Stack Small Primitive",
+                "Stack Primitive",
+                .product(name: "Index Primitives", package: "swift-index-primitives"),
+                .product(name: "Buffer Linear Primitive", package: "swift-buffer-linear-primitives"),
+                .product(name: "Buffer Linear Small Primitive", package: "swift-buffer-linear-primitives"),
+                .product(name: "Buffer Linear Small Primitives", package: "swift-buffer-linear-primitives"),
+                .product(name: "Sequence Primitives", package: "swift-sequence-primitives"),
+                .product(name: "Iterable", package: "swift-iterator-primitives"),
+                .product(name: "Iterator Chunk Primitives", package: "swift-iterator-primitives"),
+                .product(name: "Memory Iterator Primitives", package: "swift-memory-iterator-primitives"),
+                .product(name: "Property Primitives", package: "swift-property-primitives"),
+            ]
+        ),
+
+        // MARK: - Base ops + Umbrella ([MOD-005] dual-role: base conformances + re-export of all variants)
         .target(
             name: "Stack Primitives",
             dependencies: [
-                "Stack Primitives Core",
-                "Stack Dynamic Primitives",
+                "Stack Primitive",
+                "Stack Bounded Primitive",
                 "Stack Bounded Primitives",
+                "Stack Static Primitive",
                 "Stack Static Primitives",
+                "Stack Small Primitive",
                 "Stack Small Primitives",
+                .product(name: "Index Primitives", package: "swift-index-primitives"),
+                .product(name: "Buffer Linear Primitive", package: "swift-buffer-linear-primitives"),
+                .product(name: "Buffer Linear Primitives", package: "swift-buffer-linear-primitives"),
+                .product(name: "Sequence Primitives", package: "swift-sequence-primitives"),
+                .product(name: "Iterable", package: "swift-iterator-primitives"),
+                .product(name: "Iterator Chunk Primitives", package: "swift-iterator-primitives"),
+                .product(name: "Memory Iterator Primitives", package: "swift-memory-iterator-primitives"),
+                .product(name: "Property Primitives", package: "swift-property-primitives"),
             ]
         ),
 
@@ -127,6 +179,7 @@ let package = Package(
             name: "Stack Primitives Tests",
             dependencies: [
                 "Stack Primitives",
+                "Stack Primitives Test Support",
                 .product(name: "Index Primitives Test Support", package: "swift-index-primitives"),
             ]
         ),

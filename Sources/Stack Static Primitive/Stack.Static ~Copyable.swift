@@ -9,15 +9,9 @@
 //
 // ===----------------------------------------------------------------------===//
 
+public import Stack_Primitive
 public import Buffer_Linear_Inline_Primitives
-public import Buffer_Linear_Primitives
-internal import Finite_Primitives
-public import Stack_Primitives_Core
-
-// Note: Stack.Static is declared INSIDE the Stack struct body (in Stack.swift)
-// due to a Swift compiler bug where nested types with value generic parameters
-// declared in extensions do not properly inherit ~Copyable constraints from
-// the outer type. This file contains only extensions to Stack.Static.
+import Ordinal_Primitives
 
 // MARK: - Properties
 
@@ -113,61 +107,13 @@ extension Stack.Static where Element: Copyable {
 // MARK: - Span Access
 
 extension Stack.Static where Element: ~Copyable {
-    /// A read-only view of the stack's elements.
-    public var span: Span<Element> {
-        @_lifetime(borrow self)
-        @inlinable
-        borrowing get {
-            let span = _buffer.span
-            return unsafe _overrideLifetime(span, borrowing: self)
-        }
-    }
-
     /// A mutable view of the stack's elements.
+    @inlinable
     public var mutableSpan: MutableSpan<Element> {
         @_lifetime(&self)
-        @inlinable
         mutating get {
             _buffer.mutableSpan
         }
-    }
-}
-
-// MARK: - Sendable
-
-/// Sendable conformance for `Stack.Static`.
-///
-/// ## Safety Invariant
-///
-/// `Stack.Static` is unconditionally `~Copyable` (inline `@_rawLayout`
-/// storage). Unique ownership ensures cross-thread transfer via move is
-/// race-free; the inline element bytes travel with the struct.
-///
-/// ## Intended Use
-///
-/// - Stack-allocated stack moved from constructor to consumer
-///   without heap allocation.
-/// - Embedded contexts where the compile-time capacity matches a known
-///   workload and the stack crosses one isolation boundary during setup.
-///
-/// ## Non-Goals
-///
-/// - Not a shared buffer — inline storage is tied to one owner at a time.
-/// - No synchronization; mutating access must remain single-threaded.
-extension Stack.Static: @unsafe @unchecked Sendable where Element: Sendable {}
-
-// MARK: - Iteration
-
-extension Stack.Static where Element: ~Copyable {
-    /// Calls the given closure for each element in the stack.
-    ///
-    /// Elements are visited from bottom (oldest) to top (newest).
-    ///
-    /// - Parameter body: A closure that receives each element.
-    /// - Complexity: O(n) where n is the number of elements.
-    @inlinable
-    public func forEach(_ body: (borrowing Element) -> Void) {
-        _buffer.forEach(body)
     }
 }
 
@@ -184,5 +130,37 @@ extension Stack.Static where Element: ~Copyable {
     @inlinable
     public mutating func truncate(to newCount: Stack<Element>.Index.Count) {
         _buffer.truncate(to: newCount)
+    }
+}
+
+// MARK: - Drain (Copyable)
+
+extension Stack.Static where Element: Copyable {
+    /// Drains all elements, passing each to the closure with ownership.
+    ///
+    /// After this method returns, the stack is empty but still usable.
+    ///
+    /// - Parameter body: A closure that receives each drained element with ownership.
+    /// - Complexity: O(n) where n is the number of elements.
+    @inlinable
+    public mutating func drain(_ body: (consuming Element) -> Void) {
+        var idx: Stack<Element>.Index = .zero
+        let end = count.map(Ordinal.init)
+        while idx < end {
+            body(_buffer[idx])
+            idx += .one
+        }
+        _buffer.removeAll()
+    }
+
+    /// Drains elements in LIFO order while the predicate returns true.
+    @inlinable
+    public mutating func drain(
+        while predicate: (borrowing Element) -> Bool,
+        _ body: (consuming Element) -> Void
+    ) {
+        while let element = peek(), predicate(element) {
+            body(pop()!)
+        }
     }
 }

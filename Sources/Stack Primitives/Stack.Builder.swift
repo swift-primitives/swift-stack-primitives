@@ -10,7 +10,7 @@
 // ===----------------------------------------------------------------------===//
 
 public import Buffer_Linear_Primitives
-public import Stack_Primitives_Core
+public import Stack_Primitive
 
 extension Stack where Element: ~Copyable {
     /// A result builder for declaratively constructing stacks.

@@ -9,18 +9,18 @@
 //
 // ===----------------------------------------------------------------------===//
 
-// MARK: - Hoisted Error Types (Module Level)
+public import Stack_Primitive
+
+// MARK: - Hoisted Error Type (Module Level)
 //
 // Swift does not allow nested types inside generic types to be easily accessed.
-// These error types are hoisted to module level and exposed via typealiases to
-// provide the expected Nest.Name API (Stack.Bounded.Error, Stack.Static.Error).
+// This error type is hoisted to module level and exposed via a typealias to
+// provide the expected Nest.Name API (Stack.Bounded.Error).
 //
 // This is a documented exception per [API-EXC-001] due to Swift language
 // limitations with generic nested types.
 //
-// Use the typealias forms in your code:
-// - Stack<Element>.Bounded.Error
-// - Stack<Element>.Static.Error
+// Use the typealias form in your code: Stack<Element>.Bounded.Error
 
 /// Hoisted implementation of ``Stack/Bounded/Error``.
 ///
@@ -39,24 +39,7 @@ extension __StackBoundedError: CustomStringConvertible {
     }
 }
 
-/// Hoisted implementation of ``Stack/Static/Error``.
-///
-/// - Note: Use ``Stack/Static/Error`` in your code, not this type directly.
-public enum __StackStaticError<Element: ~Copyable>: Swift.Error, Sendable, Equatable {
-    /// The stack is full and cannot accept more elements.
-    case overflow
-}
-
-extension __StackStaticError: CustomStringConvertible {
-    public var description: String {
-        switch self {
-        case .overflow:
-            return "static stack is full"
-        }
-    }
-}
-
-// MARK: - Typealiases (Nest.Name API)
+// MARK: - Typealias (Nest.Name API)
 
 extension Stack.Bounded where Element: ~Copyable {
     /// Errors that can occur during bounded stack operations.
@@ -65,13 +48,4 @@ extension Stack.Bounded where Element: ~Copyable {
     ///
     /// - ``Stack/Bounded/Error/overflow``: The stack is full and cannot accept more elements.
     public typealias Error = __StackBoundedError<Element>
-}
-
-extension Stack.Static where Element: ~Copyable {
-    /// Errors that can occur during static stack operations.
-    ///
-    /// ## Cases
-    ///
-    /// - ``Stack/Static/Error/overflow``: The stack is full and cannot accept more elements.
-    public typealias Error = __StackStaticError<Element>
 }

@@ -9,7 +9,8 @@
 //
 // ===----------------------------------------------------------------------===//
 
-public import Buffer_Linear_Small_Primitives
+public import Stack_Primitive
+public import Buffer_Linear_Small_Primitive
 
 extension Stack where Element: ~Copyable {
 
@@ -49,12 +50,13 @@ extension Stack where Element: ~Copyable {
     /// a deinitializer to clean up inline storage. If you need `Copyable` semantics
     /// with value generic capacity, use ``Stack`` instead (which always heap-allocates
     /// and supports conditional `Copyable` conformance).
-    /// Element cleanup is handled by `Storage.Inline`'s deinit (inline path)
-    /// or `Storage.Heap`'s deinit (spilled path).
     // SAFETY: Safe by construction — backing storage uses only stdlib
     // SAFETY: safe types; `@safe` documents that this type performs no
     // SAFETY: unsafe operations.
+    // @frozen lifts the non-frozen partial-consume restriction so the consuming
+    // `Sequenceable.makeIterator()` can extract `_buffer`. ABI-freeze is fine pre-1.0.
     @safe
+    @frozen
     public struct Small<let inlineCapacity: Int>: ~Copyable {
         @usableFromInline
         package var _buffer: Buffer<Element>.Linear.Small<inlineCapacity>
@@ -70,3 +72,27 @@ extension Stack where Element: ~Copyable {
         public var isSpilled: Bool { _buffer.isSpilled }
     }
 }
+
+// MARK: - Sendable
+
+/// Sendable conformance for `Stack.Small`.
+///
+/// ## Safety Invariant
+///
+/// `Stack.Small` is unconditionally `~Copyable` (inline storage with automatic
+/// heap spill). Unique ownership ensures the move across threads relinquishes the
+/// sender's access; both the inline bytes and any spilled allocation transfer
+/// together.
+///
+/// ## Intended Use
+///
+/// - SmallVec-style stack handed from builder to consumer where typical workloads
+///   fit inline but can spill.
+/// - Transferring small-size-optimized stacks of `~Copyable` elements without
+///   forcing heap allocation for common cases.
+///
+/// ## Non-Goals
+///
+/// - Not safe for concurrent mutation on either the inline or spilled path.
+/// - Spill transitions are not atomic with respect to external observers.
+extension Stack.Small: @unsafe @unchecked Sendable where Element: Sendable {}

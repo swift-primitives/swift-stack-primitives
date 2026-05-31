@@ -9,8 +9,10 @@
 //
 // ===----------------------------------------------------------------------===//
 
+public import Buffer_Linear_Primitive
 public import Buffer_Linear_Primitives
-public import Stack_Primitives_Core
+import Index_Primitives
+import Ordinal_Primitives
 
 // MARK: - Properties
 
@@ -72,7 +74,6 @@ extension Stack where Element: ~Copyable {
     /// - Parameter keepingCapacity: If `true`, the stack keeps its current capacity.
     ///   If `false`, the storage is released. Default is `true`.
     /// - Complexity: O(n) where n is the number of elements.
-    // on remove.all() + conditional buffer reassignment in deep @inlinable chain.
     @inlinable
     public mutating func clear(keepingCapacity: Bool = true) {
         _buffer.remove.all()
@@ -106,47 +107,18 @@ extension Stack where Element: ~Copyable {
 // MARK: - Span Access
 
 extension Stack where Element: ~Copyable {
-    /// A read-only view of the stack's elements.
-    ///
-    /// Elements are ordered from bottom (index 0) up to the top.
-    ///
-    /// - Complexity: O(1)
-    public var span: Span<Element> {
-        @_lifetime(borrow self)
-        @inlinable
-        borrowing get {
-            let span = _buffer.span
-            return unsafe _overrideLifetime(span, borrowing: self)
-        }
-    }
-
     /// A mutable view of the stack's elements.
     ///
     /// Elements are ordered from bottom (index 0) up to the top.
     /// For Copyable elements, this triggers CoW if needed.
     ///
     /// - Complexity: O(1), O(n) if CoW copy triggered
+    @inlinable
     public var mutableSpan: MutableSpan<Element> {
         @_lifetime(&self)
-        @inlinable
         mutating get {
             _buffer.mutableSpan
         }
-    }
-}
-
-// MARK: - Iteration (for ~Copyable elements)
-
-extension Stack where Element: ~Copyable {
-    /// Calls the given closure for each element in the stack.
-    ///
-    /// Elements are visited from bottom (oldest) to top (newest).
-    ///
-    /// - Parameter body: A closure that receives each element.
-    /// - Complexity: O(n) where n is the number of elements.
-    @inlinable
-    public func forEach(_ body: (borrowing Element) -> Void) {
-        _buffer.forEach(body)
     }
 }
 

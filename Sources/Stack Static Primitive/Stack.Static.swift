@@ -9,6 +9,7 @@
 //
 // ===----------------------------------------------------------------------===//
 
+public import Stack_Primitive
 public import Buffer_Linear_Inline_Primitives
 
 extension Stack where Element: ~Copyable {
@@ -21,6 +22,15 @@ extension Stack where Element: ~Copyable {
     /// requiring no heap allocation. The capacity is specified as a compile-time
     /// generic parameter.
     /// Element cleanup is handled by `Storage.Inline`'s deinit.
+    ///
+    /// ## Non-Copyable
+    ///
+    /// `Stack.Static` is unconditionally `~Copyable` (move-only) because inline
+    /// storage requires a deinitializer. For `Copyable` semantics, use ``Stack``.
+    // @frozen lifts the non-frozen partial-consume restriction so the consuming
+    // `Sequenceable.makeIterator()` can extract `_buffer`. ABI-freeze is fine
+    // pre-1.0.
+    @frozen
     public struct Static<let capacity: Int>: ~Copyable {
         @usableFromInline
         package var _buffer: Buffer<Element>.Linear.Inline<capacity>
@@ -32,3 +42,25 @@ extension Stack where Element: ~Copyable {
         }
     }
 }
+
+// MARK: - Sendable
+
+/// Sendable conformance for `Stack.Static`.
+///
+/// ## Safety Invariant
+///
+/// `Stack.Static` is unconditionally `~Copyable` (inline storage). Unique
+/// ownership ensures cross-thread transfer via move is race-free; the inline
+/// element bytes travel with the struct.
+///
+/// ## Intended Use
+///
+/// - Stack-allocated stack moved from constructor to consumer without heap
+///   allocation.
+/// - Embedded contexts where the compile-time capacity matches a known workload.
+///
+/// ## Non-Goals
+///
+/// - Not a shared buffer — inline storage is tied to one owner at a time.
+/// - No synchronization; mutating access must remain single-threaded.
+extension Stack.Static: @unsafe @unchecked Sendable where Element: Sendable {}

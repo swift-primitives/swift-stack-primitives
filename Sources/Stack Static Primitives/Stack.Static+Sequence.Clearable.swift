@@ -9,7 +9,17 @@
 //
 // ===----------------------------------------------------------------------===//
 
-@_exported public import Buffer_Linear_Primitives
-// Re-exports for Stack Primitives Core
-@_exported public import Index_Primitives
-@_exported public import Property_Primitives
+public import Stack_Static_Primitive
+import Sequence_Primitives
+
+// MARK: - Sequence.Clearable Conformance
+
+extension Stack.Static: Sequence.Clearable where Element: Copyable {
+    /// Removes all elements from the stack.
+    ///
+    /// This enables `.forEach.consuming { }` pattern via `Property.Inout` extension.
+    @inlinable
+    public mutating func removeAll() {
+        clear()
+    }
+}

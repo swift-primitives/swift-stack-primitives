@@ -9,5 +9,9 @@
 //
 // ===----------------------------------------------------------------------===//
 
-@_exported public import Stack_Small_Primitive
-@_exported public import Sequence_Primitives
+// exports.swift
+// Re-exports for Stack Bounded Primitive (the bounded stack type module).
+
+@_exported public import Stack_Primitive
+@_exported public import Buffer_Linear_Bounded_Primitive
+@_exported public import Buffer_Linear_Bounded_Primitives

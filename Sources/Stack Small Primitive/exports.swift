@@ -9,6 +9,9 @@
 //
 // ===----------------------------------------------------------------------===//
 
-@_exported public import Collection_Primitives
-@_exported public import Sequence_Primitives
-@_exported public import Stack_Primitives_Core
+// exports.swift
+// Re-exports for Stack Small Primitive (the small-buffer-optimized stack type module).
+
+@_exported public import Stack_Primitive
+@_exported public import Buffer_Linear_Small_Primitive
+@_exported public import Buffer_Linear_Small_Primitives

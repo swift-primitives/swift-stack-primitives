@@ -9,14 +9,10 @@
 //
 // ===----------------------------------------------------------------------===//
 
-public import Buffer_Linear_Primitives
+public import Stack_Primitive
+public import Buffer_Linear_Small_Primitive
 public import Buffer_Linear_Small_Primitives
-public import Stack_Primitives_Core
-
-// Note: Stack.Small is declared INSIDE the Stack struct body (in Stack.swift)
-// due to a Swift compiler bug where nested types with value generic parameters
-// declared in extensions do not properly inherit ~Copyable constraints from
-// the outer type. This file contains only extensions to Stack.Small.
+import Ordinal_Primitives
 
 // MARK: - Properties
 
@@ -71,9 +67,6 @@ extension Stack.Small where Element: ~Copyable {
     }
 }
 
-// Note: Stack.Small is UNCONDITIONALLY ~Copyable due to the deinit requirement
-// for inline storage cleanup. No CoW extensions are needed.
-
 // MARK: - Peek
 
 extension Stack.Small where Element: ~Copyable {
@@ -115,63 +108,13 @@ extension Stack.Small where Element: Copyable {
 // MARK: - Span Access
 
 extension Stack.Small where Element: ~Copyable {
-    /// A read-only view of the stack's elements.
-    public var span: Span<Element> {
-        @_lifetime(borrow self)
-        @inlinable
-        borrowing get {
-            let span = _buffer.span
-            return unsafe _overrideLifetime(span, borrowing: self)
-        }
-    }
-
     /// A mutable view of the stack's elements.
+    @inlinable
     public var mutableSpan: MutableSpan<Element> {
         @_lifetime(&self)
-        @inlinable
         mutating get {
             _buffer.mutableSpan
         }
-    }
-}
-
-// MARK: - Sendable
-
-/// Sendable conformance for `Stack.Small`.
-///
-/// ## Safety Invariant
-///
-/// `Stack.Small` is unconditionally `~Copyable` (inline storage with
-/// automatic heap spill). Unique ownership ensures the move across
-/// threads relinquishes the sender's access; both the inline bytes and
-/// any spilled allocation transfer together.
-///
-/// ## Intended Use
-///
-/// - SmallVec-style stack handed from builder to consumer where
-///   typical workloads fit inline but can spill.
-/// - Transferring small-size-optimized stacks of `~Copyable` elements
-///   without forcing heap allocation for common cases.
-///
-/// ## Non-Goals
-///
-/// - Not safe for concurrent mutation on either the inline or spilled
-///   path; single-owner is the only supported model.
-/// - Spill transitions are not atomic with respect to external observers.
-extension Stack.Small: @unsafe @unchecked Sendable where Element: Sendable {}
-
-// MARK: - Iteration (for ~Copyable elements)
-
-extension Stack.Small where Element: ~Copyable {
-    /// Calls the given closure for each element in the stack.
-    ///
-    /// Elements are visited from bottom (oldest) to top (newest).
-    ///
-    /// - Parameter body: A closure that receives each element.
-    /// - Complexity: O(n) where n is the number of elements.
-    @inlinable
-    public func forEach(_ body: (borrowing Element) -> Void) {
-        _buffer.forEach(body)
     }
 }
 
@@ -188,5 +131,34 @@ extension Stack.Small where Element: ~Copyable {
     @inlinable
     public mutating func truncate(to newCount: Stack<Element>.Index.Count) {
         _buffer.truncate(to: newCount)
+    }
+}
+
+// MARK: - Drain (Copyable)
+
+extension Stack.Small where Element: Copyable {
+    /// Drains all elements, passing each to the closure with ownership.
+    ///
+    /// After this method returns, the stack is empty but still usable.
+    /// Resets to inline mode if spilled.
+    ///
+    /// - Parameter body: A closure that receives each drained element with ownership.
+    /// - Complexity: O(n) where n is the number of elements.
+    @inlinable
+    public mutating func drain(_ body: (consuming Element) -> Void) {
+        while !isEmpty {
+            body(_buffer.remove.last())
+        }
+    }
+
+    /// Drains elements in LIFO order while the predicate returns true.
+    @inlinable
+    public mutating func drain(
+        while predicate: (borrowing Element) -> Bool,
+        _ body: (consuming Element) -> Void
+    ) {
+        while let element = peek(), predicate(element) {
+            body(pop()!)
+        }
     }
 }

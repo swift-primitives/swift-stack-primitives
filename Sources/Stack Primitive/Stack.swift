@@ -9,9 +9,9 @@
 //
 // ===----------------------------------------------------------------------===//
 
-internal import Buffer_Linear_Inline_Primitives
+public import Buffer_Linear_Primitive
 public import Buffer_Linear_Primitives
-internal import Buffer_Linear_Small_Primitives
+public import Index_Primitives
 
 /// A dynamically-growing LIFO stack supporting move-only elements.
 ///
@@ -45,20 +45,18 @@ internal import Buffer_Linear_Small_Primitives
 /// handles.push(FileHandle())
 /// ```
 ///
-/// ## Sequence Conformance
+/// ## Iteration
 ///
-/// When `Element` is `Copyable`, `Stack` conforms to `Sequence`:
+/// `Stack` conforms to `Iterable` (multipass, borrowing) and — when `Element` is
+/// `Copyable` — `Sequenceable` (single-pass, consuming). Both are vended in the
+/// `Stack Primitives` ops module:
 ///
 /// ```swift
 /// var stack = Stack<Int>()
 /// stack.push(1)
 /// stack.push(2)
-/// for element in stack {
-///     print(element)  // 1, then 2
-/// }
+/// stack.forEach { print($0) }  // 1, then 2 — inherited from the Iterable floor
 /// ```
-///
-/// For `~Copyable` elements, use ``forEach(_:)`` instead.
 ///
 /// ## Copy-on-Write
 ///
@@ -77,84 +75,15 @@ internal import Buffer_Linear_Small_Primitives
 @safe
 public struct Stack<Element: ~Copyable>: ~Copyable {
 
+    /// Element storage using Buffer.Linear from buffer-primitives.
+    ///
+    /// `@usableFromInline package` ([MOD-036] refined-C): the hot
+    /// `~Copyable`/`Copyable` operation surface co-located in this (type)
+    /// module inlines cross-package to zero-witness-dispatch; the cold
+    /// sequence/collection-family conformances in the ops module reach this
+    /// storage only through the public `span` / `makeIterator` witnesses.
     @usableFromInline
     package var _buffer: Buffer<Element>.Linear
-
-    /// A fixed-capacity LIFO stack supporting move-only elements.
-    ///
-    /// `Stack.Bounded` allocates storage upfront and throws on overflow.
-    /// Use this variant when capacity is known or in contexts requiring
-    /// predictable memory behavior (embedded, real-time).
-    ///
-    /// ## Example
-    ///
-    /// ```swift
-    /// var stack = Stack<Int>.Bounded(capacity: 10)
-    /// try stack.push(1)
-    /// try stack.push(2)
-    /// stack.pop()        // Optional(2)
-    /// stack.peek { $0 }  // Optional(1)
-    /// ```
-    ///
-    /// ## When to Use
-    ///
-    /// Use `Stack.Bounded` when:
-    /// - Maximum capacity is known at runtime
-    /// - Predictable memory behavior is required (embedded, real-time)
-    /// - Overflow should be an explicit error
-    ///
-    /// For unbounded growth, use ``Stack`` (the canonical type).
-    /// For compile-time capacity with zero heap allocation, use ``Stack/Static``.
-    ///
-    /// ## Sequence Conformance
-    ///
-    /// When `Element` is `Copyable`, `Stack.Bounded` conforms to `Sequence`:
-    ///
-    /// ```swift
-    /// var stack = try Stack<Int>.Bounded(capacity: 10)
-    /// try stack.push(1)
-    /// try stack.push(2)
-    /// for element in stack {
-    ///     print(element)  // 1, then 2
-    /// }
-    /// ```
-    ///
-    /// ## Copy-on-Write
-    ///
-    /// When `Element` is `Copyable`, `Stack.Bounded` uses copy-on-write semantics:
-    /// copies share storage until mutation, providing efficient value semantics.
-    ///
-    /// ## Move-Only Support
-    ///
-    /// Both the stack and its elements can be `~Copyable`:
-    ///
-    /// ```swift
-    /// struct FileHandle: ~Copyable { ... }
-    /// var handles = try Stack<FileHandle>.Bounded(capacity: 5)
-    /// try handles.push(FileHandle())
-    /// ```
-    // WHY: Category D — structural Sendable workaround; the type is
-    // WHY: structurally value-safe but the compiler cannot synthesize
-    // WHY: Sendable due to a stored pointer / generic parameter shape.
-    @safe
-    public struct Bounded: ~Copyable {
-        @usableFromInline
-        package var _buffer: Buffer<Element>.Linear.Bounded
-
-        /// The requested capacity (for overflow checking).
-        public let requestedCapacity: Index.Count
-
-        /// Creates a stack with the specified capacity.
-        ///
-        /// - Parameter capacity: Maximum number of elements.
-        @inlinable
-        public init(capacity: Index.Count) {
-            self._buffer = Buffer<Element>.Linear.Bounded(
-                minimumCapacity: capacity
-            )
-            self.requestedCapacity = capacity
-        }
-    }
 
     /// Creates an empty stack.
     ///
@@ -164,7 +93,7 @@ public struct Stack<Element: ~Copyable>: ~Copyable {
         self._buffer = Buffer<Element>.Linear(minimumCapacity: .zero)
     }
 
-    // Note: init(_ elementS: Swift.Sequence) is in Stack Dynamic Primitives
+    // Note: init(_ elements: Swift.Sequence) is in Stack Primitives (ops)
     // because it requires push() which is defined there.
 
     /// Creates a stack with reserved capacity.
@@ -186,19 +115,6 @@ public struct Stack<Element: ~Copyable>: ~Copyable {
 /// This enables value semantics with copy-on-write optimization:
 /// copies share storage until mutation.
 extension Stack: Copyable where Element: Copyable {}
-
-/// `Stack.Bounded` is `Copyable` when its elements are `Copyable`.
-///
-/// This enables value semantics with copy-on-write optimization:
-/// copies share storage until mutation.
-extension Stack.Bounded: Copyable where Element: Copyable {}
-
-// Note: Stack.Small is UNCONDITIONALLY ~Copyable due to the deinit requirement
-// for inline storage cleanup. If you need Copyable semantics, use Stack (which
-// always heap-allocates and can be conditionally Copyable).
-
-// Note: Stack.Bounded: Swift.Sequence conformance is in Stack Bounded Primitives module
-// to avoid constraint poisoning on the Core type.
 
 // MARK: - Sendable
 

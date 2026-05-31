@@ -9,5 +9,8 @@
 //
 // ===----------------------------------------------------------------------===//
 
-@_exported public import Stack_Small_Primitive
-@_exported public import Sequence_Primitives
+// exports.swift
+// Re-exports for Stack Static Primitive (the inline-storage stack type module).
+
+@_exported public import Stack_Primitive
+@_exported public import Buffer_Linear_Inline_Primitives

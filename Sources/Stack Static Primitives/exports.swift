@@ -9,6 +9,5 @@
 //
 // ===----------------------------------------------------------------------===//
 
-@_exported public import Collection_Primitives
+@_exported public import Stack_Static_Primitive
 @_exported public import Sequence_Primitives
-@_exported public import Stack_Primitives_Core

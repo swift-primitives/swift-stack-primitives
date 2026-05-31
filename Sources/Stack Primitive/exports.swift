@@ -9,5 +9,11 @@
 //
 // ===----------------------------------------------------------------------===//
 
-@_exported public import Stack_Small_Primitive
-@_exported public import Sequence_Primitives
+// exports.swift
+// Re-exports for Stack Primitive (the base dynamic stack type module).
+// Declares Stack (dynamic, heap) + the Stack.Index typealias; re-exports the
+// heap backing the base type composes.
+
+@_exported public import Buffer_Linear_Primitive
+@_exported public import Buffer_Linear_Primitives
+@_exported public import Index_Primitives
