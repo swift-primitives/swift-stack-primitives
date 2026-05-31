@@ -49,28 +49,6 @@
       "statusRaw": "RECOMMENDATION",
       "tier": null,
       "scope": null
-    },
-    {
-      "file": "stack-operations-audit.md",
-      "displayName": "stack-operations-audit.md",
-      "topic": "Canonical Stack ADT operations completeness audit",
-      "date": "2026-02-16",
-      "status": "RECOMMENDATION",
-      "statusDetail": null,
-      "statusRaw": "RECOMMENDATION",
-      "tier": null,
-      "scope": null
-    },
-    {
-      "file": "audit.md",
-      "displayName": "audit.md",
-      "topic": "Pre-publication dependency-tree audit: multi-type error file (2 __-prefixed enums)",
-      "date": "2026-04-08",
-      "status": "LEGACY",
-      "statusDetail": null,
-      "statusRaw": "LEGACY",
-      "tier": null,
-      "scope": null
     }
   ]
 }
