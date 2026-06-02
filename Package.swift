@@ -43,6 +43,8 @@ let package = Package(
         .package(url: "https://github.com/swift-primitives/swift-memory-iterator-primitives.git", branch: "main"),
         .package(url: "https://github.com/swift-primitives/swift-ordinal-primitives.git", branch: "main"),
         .package(url: "https://github.com/swift-primitives/swift-finite-primitives.git", branch: "main"),
+        .package(url: "https://github.com/swift-primitives/swift-equation-primitives.git", branch: "main"),
+        .package(url: "https://github.com/swift-primitives/swift-hash-primitives.git", branch: "main"),
     ],
     targets: [
 
@@ -50,6 +52,8 @@ let package = Package(
         .target(
             name: "Stack Primitive",
             dependencies: [
+                .product(name: "Equation Primitives Standard Library Integration", package: "swift-equation-primitives"),
+                .product(name: "Hash Primitives Standard Library Integration", package: "swift-hash-primitives"),
                 .product(name: "Index Primitives", package: "swift-index-primitives"),
                 .product(name: "Buffer Linear Primitive", package: "swift-buffer-linear-primitives"),
                 .product(name: "Buffer Linear Primitives", package: "swift-buffer-linear-primitives"),
@@ -62,6 +66,8 @@ let package = Package(
         .target(
             name: "Stack Bounded Primitive",
             dependencies: [
+                .product(name: "Equation Primitives Standard Library Integration", package: "swift-equation-primitives"),
+                .product(name: "Hash Primitives Standard Library Integration", package: "swift-hash-primitives"),
                 "Stack Primitive",
                 .product(name: "Index Primitives", package: "swift-index-primitives"),
                 .product(name: "Buffer Linear Primitive", package: "swift-buffer-linear-primitives"),
@@ -76,6 +82,8 @@ let package = Package(
         .target(
             name: "Stack Static Primitive",
             dependencies: [
+                .product(name: "Equation Primitives Standard Library Integration", package: "swift-equation-primitives"),
+                .product(name: "Hash Primitives Standard Library Integration", package: "swift-hash-primitives"),
                 "Stack Primitive",
                 .product(name: "Index Primitives", package: "swift-index-primitives"),
                 .product(name: "Buffer Linear Primitive", package: "swift-buffer-linear-primitives"),
@@ -90,6 +98,8 @@ let package = Package(
         .target(
             name: "Stack Small Primitive",
             dependencies: [
+                .product(name: "Equation Primitives Standard Library Integration", package: "swift-equation-primitives"),
+                .product(name: "Hash Primitives Standard Library Integration", package: "swift-hash-primitives"),
                 "Stack Primitive",
                 .product(name: "Index Primitives", package: "swift-index-primitives"),
                 .product(name: "Buffer Linear Primitive", package: "swift-buffer-linear-primitives"),
