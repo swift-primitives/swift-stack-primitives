@@ -11,19 +11,19 @@
 
 public import Stack_Primitive
 public import Buffer_Linear_Bounded_Primitive
-public import Memory_Contiguous_Primitives
+public import Span_Protocol_Primitives
 
-// MARK: - Memory.Contiguous.Protocol Conformance
+// MARK: - Span.`Protocol` Conformance
 //
 // Co-located with the type and its span witness ([MOD-036] refined-C). The
 // memory→Iterable bridge keys off this conformance to vend the borrowing
 // `Iterator.Chunk` when the type also declares `: Iterable` (ops module).
 
-extension Stack.Bounded: Memory.Contiguous.`Protocol` where Element: ~Copyable {
+extension Stack.Bounded: Span.`Protocol` where Element: ~Copyable {
     /// A read-only view of the stack's elements in bottom-to-top order.
-    /// Witness for `Memory.Contiguous.Protocol`.
+    /// Witness for `Span.\`Protocol\``.
     @inlinable
-    public var span: Span<Element> {
+    public var span: Swift.Span<Element> {
         @_lifetime(borrow self)
         borrowing get { _buffer.span }
     }

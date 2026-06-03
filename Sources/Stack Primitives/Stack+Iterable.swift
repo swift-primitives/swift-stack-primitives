@@ -17,7 +17,7 @@ import Memory_Iterator_Primitives
 // MARK: - Iterable (multipass, borrowing)
 //
 // The multipass borrowing `makeIterator()` is vended FOR FREE by the memory→Iterable
-// bridge over the `Memory.Contiguous.Protocol` conformance (type module), yielding
+// bridge over the `Span.`Protocol`` conformance (type module), yielding
 // `Iterator.Chunk` — no hand-written iterator. The `@_implements(Iterable, Iterator)`
 // escape hatch binds Iterable's `Iterator` to `Iterator.Chunk`, leaving Sequenceable's
 // binding to the sibling Stack+Sequenceable.swift. `forEach` is inherited from the

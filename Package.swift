@@ -39,8 +39,9 @@ let package = Package(
         .package(url: "https://github.com/swift-primitives/swift-property-primitives.git", branch: "main"),
         .package(url: "https://github.com/swift-primitives/swift-sequence-primitives.git", branch: "main"),
         .package(url: "https://github.com/swift-primitives/swift-iterator-primitives.git", branch: "main"),
-        .package(url: "https://github.com/swift-primitives/swift-memory-primitives.git", branch: "main"),
-        .package(url: "https://github.com/swift-primitives/swift-memory-iterator-primitives.git", branch: "main"),
+        .package(path: "../swift-memory-primitives--w2"),
+        .package(path: "../swift-span-primitives"),
+        .package(path: "../swift-memory-iterator-primitives--w2"),
         .package(url: "https://github.com/swift-primitives/swift-ordinal-primitives.git", branch: "main"),
         .package(url: "https://github.com/swift-primitives/swift-finite-primitives.git", branch: "main"),
         .package(url: "https://github.com/swift-primitives/swift-equation-primitives.git", branch: "main"),
@@ -57,7 +58,8 @@ let package = Package(
                 .product(name: "Index Primitives", package: "swift-index-primitives"),
                 .product(name: "Buffer Linear Primitive", package: "swift-buffer-linear-primitives"),
                 .product(name: "Buffer Linear Primitives", package: "swift-buffer-linear-primitives"),
-                .product(name: "Memory Contiguous Primitives", package: "swift-memory-primitives"),
+                .product(name: "Memory Contiguous Primitives", package: "swift-memory-primitives--w2"),
+                .product(name: "Span Protocol Primitives", package: "swift-span-primitives"),
                 .product(name: "Ordinal Primitives", package: "swift-ordinal-primitives"),
             ]
         ),
@@ -73,7 +75,8 @@ let package = Package(
                 .product(name: "Buffer Linear Primitive", package: "swift-buffer-linear-primitives"),
                 .product(name: "Buffer Linear Bounded Primitive", package: "swift-buffer-linear-primitives"),
                 .product(name: "Buffer Linear Bounded Primitives", package: "swift-buffer-linear-primitives"),
-                .product(name: "Memory Contiguous Primitives", package: "swift-memory-primitives"),
+                .product(name: "Memory Contiguous Primitives", package: "swift-memory-primitives--w2"),
+                .product(name: "Span Protocol Primitives", package: "swift-span-primitives"),
                 .product(name: "Ordinal Primitives", package: "swift-ordinal-primitives"),
             ]
         ),
@@ -88,7 +91,8 @@ let package = Package(
                 .product(name: "Index Primitives", package: "swift-index-primitives"),
                 .product(name: "Buffer Linear Primitive", package: "swift-buffer-linear-primitives"),
                 .product(name: "Buffer Linear Inline Primitives", package: "swift-buffer-linear-primitives"),
-                .product(name: "Memory Contiguous Primitives", package: "swift-memory-primitives"),
+                .product(name: "Memory Contiguous Primitives", package: "swift-memory-primitives--w2"),
+                .product(name: "Span Protocol Primitives", package: "swift-span-primitives"),
                 .product(name: "Ordinal Primitives", package: "swift-ordinal-primitives"),
                 .product(name: "Finite Primitives", package: "swift-finite-primitives"),
             ]
@@ -105,7 +109,8 @@ let package = Package(
                 .product(name: "Buffer Linear Primitive", package: "swift-buffer-linear-primitives"),
                 .product(name: "Buffer Linear Small Primitive", package: "swift-buffer-linear-primitives"),
                 .product(name: "Buffer Linear Small Primitives", package: "swift-buffer-linear-primitives"),
-                .product(name: "Memory Contiguous Primitives", package: "swift-memory-primitives"),
+                .product(name: "Memory Contiguous Primitives", package: "swift-memory-primitives--w2"),
+                .product(name: "Span Protocol Primitives", package: "swift-span-primitives"),
                 .product(name: "Ordinal Primitives", package: "swift-ordinal-primitives"),
             ]
         ),
@@ -122,7 +127,7 @@ let package = Package(
                 .product(name: "Sequence Primitives", package: "swift-sequence-primitives"),
                 .product(name: "Iterable", package: "swift-iterator-primitives"),
                 .product(name: "Iterator Chunk Primitives", package: "swift-iterator-primitives"),
-                .product(name: "Memory Iterator Primitives", package: "swift-memory-iterator-primitives"),
+                .product(name: "Memory Iterator Primitives", package: "swift-memory-iterator-primitives--w2"),
                 .product(name: "Property Primitives", package: "swift-property-primitives"),
             ]
         ),
@@ -139,7 +144,7 @@ let package = Package(
                 .product(name: "Sequence Primitives", package: "swift-sequence-primitives"),
                 .product(name: "Iterable", package: "swift-iterator-primitives"),
                 .product(name: "Iterator Chunk Primitives", package: "swift-iterator-primitives"),
-                .product(name: "Memory Iterator Primitives", package: "swift-memory-iterator-primitives"),
+                .product(name: "Memory Iterator Primitives", package: "swift-memory-iterator-primitives--w2"),
                 .product(name: "Property Primitives", package: "swift-property-primitives"),
             ]
         ),
@@ -157,7 +162,7 @@ let package = Package(
                 .product(name: "Sequence Primitives", package: "swift-sequence-primitives"),
                 .product(name: "Iterable", package: "swift-iterator-primitives"),
                 .product(name: "Iterator Chunk Primitives", package: "swift-iterator-primitives"),
-                .product(name: "Memory Iterator Primitives", package: "swift-memory-iterator-primitives"),
+                .product(name: "Memory Iterator Primitives", package: "swift-memory-iterator-primitives--w2"),
                 .product(name: "Property Primitives", package: "swift-property-primitives"),
             ]
         ),
@@ -179,7 +184,7 @@ let package = Package(
                 .product(name: "Sequence Primitives", package: "swift-sequence-primitives"),
                 .product(name: "Iterable", package: "swift-iterator-primitives"),
                 .product(name: "Iterator Chunk Primitives", package: "swift-iterator-primitives"),
-                .product(name: "Memory Iterator Primitives", package: "swift-memory-iterator-primitives"),
+                .product(name: "Memory Iterator Primitives", package: "swift-memory-iterator-primitives--w2"),
                 .product(name: "Property Primitives", package: "swift-property-primitives"),
             ]
         ),
