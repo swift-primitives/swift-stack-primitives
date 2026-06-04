@@ -10,6 +10,7 @@
 // ===----------------------------------------------------------------------===//
 
 public import Buffer_Linear_Primitive
+public import Storage_Heap_Primitives
 public import Buffer_Linear_Primitives
 import Index_Primitives
 import Ordinal_Primitives
@@ -54,7 +55,7 @@ extension Stack where Element: Copyable {
         _buffer.remove.all()
 
         if !keepingCapacity {
-            _buffer = Buffer<Element>.Linear(minimumCapacity: .zero)
+            _buffer = Buffer<Storage<Element>.Heap>.Linear(minimumCapacity: .zero)
         }
     }
 }
@@ -88,11 +89,13 @@ extension Stack where Element: Copyable {
     /// ensuring copy-on-write semantics before mutation.
     ///
     /// - Complexity: O(1), O(n) if CoW copy triggered
+    ///
+    /// Forwards the base `Buffer.Linear`'s form-α `mutableSpan()` *method* (D1).
     @inlinable
     public var mutableSpan: MutableSpan<Element> {
         @_lifetime(&self)
         mutating get {
-            _buffer.mutableSpan
+            _buffer.mutableSpan()
         }
     }
 }
@@ -111,11 +114,11 @@ extension Stack where Element: Copyable {
         guard _buffer.capacity > currentCount else { return }
 
         if currentCount == .zero {
-            _buffer = Buffer<Element>.Linear(minimumCapacity: .zero)
+            _buffer = Buffer<Storage<Element>.Heap>.Linear(minimumCapacity: .zero)
             return
         }
 
-        var newBuffer = Buffer<Element>.Linear(minimumCapacity: currentCount)
+        var newBuffer = Buffer<Storage<Element>.Heap>.Linear(minimumCapacity: currentCount)
         var idx: Index = .zero
         let end = currentCount.map(Ordinal.init)
         while idx < end {

@@ -10,6 +10,7 @@
 // ===----------------------------------------------------------------------===//
 
 public import Buffer_Linear_Primitive
+public import Storage_Heap_Primitives
 public import Buffer_Linear_Primitives
 import Index_Primitives
 import Ordinal_Primitives
@@ -79,7 +80,7 @@ extension Stack where Element: ~Copyable {
         _buffer.remove.all()
 
         if !keepingCapacity {
-            _buffer = Buffer<Element>.Linear(minimumCapacity: .zero)
+            _buffer = Buffer<Storage<Element>.Heap>.Linear(minimumCapacity: .zero)
         }
     }
 }
@@ -113,11 +114,15 @@ extension Stack where Element: ~Copyable {
     /// For Copyable elements, this triggers CoW if needed.
     ///
     /// - Complexity: O(1), O(n) if CoW copy triggered
+    ///
+    /// Forwards the base `Buffer.Linear`'s form-α `mutableSpan()` *method* (D1; the
+    /// underlying property was dropped at the ⑤-(N) reparam — a generic substrate
+    /// cannot vend a forwarding mutable-span property; a Heap-pinned `<E>` method can).
     @inlinable
     public var mutableSpan: MutableSpan<Element> {
         @_lifetime(&self)
         mutating get {
-            _buffer.mutableSpan
+            _buffer.mutableSpan()
         }
     }
 }

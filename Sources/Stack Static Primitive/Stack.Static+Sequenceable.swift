@@ -10,6 +10,7 @@
 // ===----------------------------------------------------------------------===//
 
 public import Stack_Primitive
+public import Storage_Heap_Primitives
 public import Buffer_Linear_Inline_Primitives
 
 // MARK: - Sequenceable witness (makeIterator)
@@ -24,7 +25,7 @@ extension Stack.Static where Element: Copyable {
 
     /// A single-pass consuming iterator in bottom-to-top order. Witness for `Sequenceable`.
     @inlinable
-    public consuming func makeIterator() -> Buffer<Element>.Linear.Inline<capacity>.Scalar {
+    public consuming func makeIterator() -> Buffer<Storage<Element>.Heap>.Linear.Inline<capacity>.Scalar {
         _buffer.makeIterator()
     }
 }

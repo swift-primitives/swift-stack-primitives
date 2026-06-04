@@ -10,26 +10,26 @@
 // ===----------------------------------------------------------------------===//
 
 public import Buffer_Linear_Primitive
-public import Memory_Contiguous_Primitives
+public import Span_Protocol_Primitives
 
-// MARK: - Memory.Contiguous.Protocol Conformance
+// MARK: - Span.`Protocol` Conformance
 //
 // Co-located with the type and its span witness ([MOD-036] refined-C;
-// conformance-placement decision): `Memory.Contiguous.Protocol` is
+// conformance-placement decision): `Span.\`Protocol\`` is
 // ~Copyable-compatible (`associatedtype Element: ~Copyable`); its single
 // requirement `span` is witnessed below (`where Element: ~Copyable`), co-located
-// with the type. This is the memory-layer span capability, NOT iteration:
-// the memory→Iterable bridge keys off `Memory.ContiguousProtocol where Self:
+// with the type. This is the span capability, NOT iteration:
+// the memory→Iterable bridge keys off `Span.\`Protocol\` where Self:
 // Iterable` and vends the borrowing `Iterator.Chunk` when the type also declares
 // `: Iterable` (in the ops module).
 
-extension Stack: Memory.Contiguous.`Protocol` where Element: ~Copyable {
+extension Stack: Span.`Protocol` where Element: ~Copyable {
     /// A read-only view of the stack's elements in bottom-to-top order.
-    /// Witness for `Memory.Contiguous.Protocol`.
+    /// Witness for `Span.\`Protocol\``.
     ///
     /// - Complexity: O(1)
     @inlinable
-    public var span: Span<Element> {
+    public var span: Swift.Span<Element> {
         @_lifetime(borrow self)
         borrowing get { _buffer.span }
     }
