@@ -35,18 +35,18 @@ let package = Package(
         .package(url: "https://github.com/swift-primitives/swift-index-primitives.git", branch: "main"),
         // W2 mesh: buffer packages on their  worktrees so every path to memory
         // unifies on identity swift-memory-primitives (collision resolved).
-        .package(path: "../swift-buffer-primitives"),
-        .package(path: "../swift-buffer-linear-primitives"),
+        .package(url: "https://github.com/swift-primitives/swift-buffer-primitives.git", branch: "main"),
+        .package(url: "https://github.com/swift-primitives/swift-buffer-linear-primitives.git", branch: "main"),
         // W3 ⑤-(N): the consumer spelling is now Buffer<Storage<Element>.Heap>.Linear,
         // so the substrate type Storage<Element>.Heap is referenced directly.
-        .package(path: "../swift-storage-primitives"),
+        .package(url: "https://github.com/swift-primitives/swift-storage-primitives.git", branch: "main"),
         .package(url: "https://github.com/swift-primitives/swift-collection-primitives.git", branch: "main"),
         .package(url: "https://github.com/swift-primitives/swift-property-primitives.git", branch: "main"),
         .package(url: "https://github.com/swift-primitives/swift-sequence-primitives.git", branch: "main"),
         .package(url: "https://github.com/swift-primitives/swift-iterator-primitives.git", branch: "main"),
-        .package(path: "../swift-memory-primitives"),
+        .package(url: "https://github.com/swift-primitives/swift-memory-primitives.git", branch: "main"),
         .package(path: "../swift-span-primitives"),
-        .package(path: "../swift-memory-iterator-primitives"),
+        .package(url: "https://github.com/swift-primitives/swift-memory-iterator-primitives.git", branch: "main"),
         .package(url: "https://github.com/swift-primitives/swift-ordinal-primitives.git", branch: "main"),
         .package(url: "https://github.com/swift-primitives/swift-finite-primitives.git", branch: "main"),
         .package(url: "https://github.com/swift-primitives/swift-equation-primitives.git", branch: "main"),
