@@ -10,6 +10,7 @@
 // ===----------------------------------------------------------------------===//
 
 public import Stack_Primitive
+public import Storage_Heap_Primitives
 public import Buffer_Linear_Inline_Primitives
 
 extension Stack where Element: ~Copyable {
@@ -33,7 +34,7 @@ extension Stack where Element: ~Copyable {
     @frozen
     public struct Static<let capacity: Int>: ~Copyable {
         @usableFromInline
-        package var _buffer: Buffer<Element>.Linear.Inline<capacity>
+        package var _buffer: Buffer<Storage<Element>.Heap>.Linear.Inline<capacity>
 
         /// Creates an empty static stack.
         @inlinable

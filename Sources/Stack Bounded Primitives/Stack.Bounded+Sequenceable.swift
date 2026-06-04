@@ -10,6 +10,7 @@
 // ===----------------------------------------------------------------------===//
 
 public import Sequence_Primitives
+public import Storage_Heap_Primitives
 public import Stack_Bounded_Primitive
 public import Buffer_Linear_Bounded_Primitive
 public import Buffer_Linear_Bounded_Primitives
@@ -22,7 +23,7 @@ public import Buffer_Linear_Bounded_Primitives
 
 extension Stack.Bounded: Sequenceable where Element: Copyable {
     @_implements(Sequenceable, Iterator)
-    public typealias SequenceableIterator = Buffer<Element>.Linear.Bounded.Scalar
+    public typealias SequenceableIterator = Buffer<Storage<Element>.Heap>.Linear.Bounded.Scalar
 
     /// Returns the count as the underestimated count since we know the exact size.
     @inlinable

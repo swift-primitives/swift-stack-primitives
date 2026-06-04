@@ -10,6 +10,7 @@
 // ===----------------------------------------------------------------------===//
 
 public import Stack_Primitive
+public import Storage_Heap_Primitives
 public import Buffer_Linear_Bounded_Primitive
 public import Index_Primitives
 
@@ -75,7 +76,7 @@ extension Stack where Element: ~Copyable {
     @safe
     public struct Bounded: ~Copyable {
         @usableFromInline
-        package var _buffer: Buffer<Element>.Linear.Bounded
+        package var _buffer: Buffer<Storage<Element>.Heap>.Linear.Bounded
 
         /// The requested capacity (for overflow checking).
         public let requestedCapacity: Stack<Element>.Index.Count
@@ -85,7 +86,7 @@ extension Stack where Element: ~Copyable {
         /// - Parameter capacity: Maximum number of elements.
         @inlinable
         public init(capacity: Stack<Element>.Index.Count) {
-            self._buffer = Buffer<Element>.Linear.Bounded(
+            self._buffer = Buffer<Storage<Element>.Heap>.Linear.Bounded(
                 minimumCapacity: capacity
             )
             self.requestedCapacity = capacity
@@ -108,7 +109,7 @@ extension Stack.Bounded: Copyable where Element: Copyable {}
 /// ## Safety Invariant
 ///
 /// `Stack.Bounded` is `~Copyable`. Single ownership is enforced by the type
-/// system; the fixed-capacity `Buffer<Element>.Linear.Bounded` it owns
+/// system; the fixed-capacity `Buffer<Storage<Element>.Heap>.Linear.Bounded` it owns
 /// transfers with it across isolation boundaries.
 ///
 /// ## Intended Use
