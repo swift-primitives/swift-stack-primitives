@@ -9,17 +9,16 @@
 //
 // ===----------------------------------------------------------------------===//
 
-public import Stack_Primitive
-import Sequence_Primitives
+public import Stack_Bounded_Primitive
 
-// MARK: - Sequence.Clearable Conformance
+// MARK: - removeAll()
 
-extension Stack: Sequence.Clearable where Element: Copyable {
+extension Stack.Bounded where Element: Copyable {
     /// Removes all elements from the stack.
     ///
-    /// This enables `.forEach.consuming { }` pattern via `Property.Inout` extension.
+    /// The capacity remains unchanged.
     @inlinable
     public mutating func removeAll() {
-        clear(keepingCapacity: false)
+        clear()
     }
 }
