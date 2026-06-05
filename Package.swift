@@ -37,8 +37,8 @@ let package = Package(
         // unifies on identity swift-memory-primitives (collision resolved).
         .package(url: "https://github.com/swift-primitives/swift-buffer-primitives.git", branch: "main"),
         .package(url: "https://github.com/swift-primitives/swift-buffer-linear-primitives.git", branch: "main"),
-        // W3 ⑤-(N): the consumer spelling is now Buffer<Storage<Element>.Heap>.Linear,
-        // so the substrate type Storage<Element>.Heap is referenced directly.
+        // W3 ⑤-(N): the consumer spelling is now Buffer<Storage<Element>.Contiguous<Memory.Heap<Element>>>.Linear,
+        // so the substrate type Storage<Element>.Contiguous<Memory.Heap<Element>> is referenced directly.
         .package(url: "https://github.com/swift-primitives/swift-storage-primitives.git", branch: "main"),
         .package(url: "https://github.com/swift-primitives/swift-collection-primitives.git", branch: "main"),
         .package(url: "https://github.com/swift-primitives/swift-property-primitives.git", branch: "main"),
