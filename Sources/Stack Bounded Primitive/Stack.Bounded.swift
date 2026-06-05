@@ -10,7 +10,7 @@
 // ===----------------------------------------------------------------------===//
 
 public import Stack_Primitive
-public import Storage_Heap_Primitives
+public import Storage_Contiguous_Primitives
 public import Buffer_Linear_Bounded_Primitive
 public import Index_Primitives
 

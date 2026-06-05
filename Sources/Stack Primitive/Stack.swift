@@ -11,7 +11,7 @@
 
 public import Buffer_Linear_Primitive
 public import Buffer_Linear_Primitives
-import Storage_Heap_Primitives
+import Storage_Contiguous_Primitives
 public import Index_Primitives
 
 /// A dynamically-growing LIFO stack supporting move-only elements.

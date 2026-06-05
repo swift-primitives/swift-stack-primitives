@@ -12,7 +12,7 @@
 public import Sequence_Primitives
 public import Memory_Heap_Primitives
 public import Storage_Contiguous_Primitives
-public import Storage_Heap_Primitives
+public import Storage_Contiguous_Primitives
 public import Stack_Primitive
 public import Buffer_Linear_Primitive
 public import Buffer_Linear_Primitives
