@@ -11,8 +11,6 @@
 
 public import Stack_Primitive
 public import Stack_Bounded_Primitive
-public import Stack_Static_Primitive
-public import Stack_Small_Primitive
 public import Index_Primitives
 import Buffer_Linear_Primitives
 

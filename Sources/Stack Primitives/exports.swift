@@ -18,5 +18,3 @@
 
 @_exported public import Stack_Primitive
 @_exported public import Stack_Bounded_Primitives
-@_exported public import Stack_Static_Primitives
-@_exported public import Stack_Small_Primitives
