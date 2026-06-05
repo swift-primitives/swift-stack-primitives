@@ -10,6 +10,7 @@
 // ===----------------------------------------------------------------------===//
 
 public import Stack_Primitive
+public import Storage_Small_Primitives
 public import Buffer_Linear_Small_Primitive
 public import Buffer_Linear_Small_Primitives
 import Ordinal_Primitives
@@ -53,7 +54,7 @@ extension Stack.Small where Element: ~Copyable {
         guard !_buffer.isEmpty else {
             return nil
         }
-        return _buffer.remove.last()
+        return _buffer.removeLast()
     }
 
     /// Removes all elements from the stack.
@@ -63,7 +64,7 @@ extension Stack.Small where Element: ~Copyable {
     /// - Complexity: O(n) where n is the number of elements.
     @inlinable
     public mutating func clear() {
-        _buffer.remove.all()
+        _buffer.removeAll()
     }
 }
 
@@ -113,7 +114,7 @@ extension Stack.Small where Element: ~Copyable {
     public var mutableSpan: MutableSpan<Element> {
         @_lifetime(&self)
         mutating get {
-            _buffer.mutableSpan
+            _buffer.mutableSpan()
         }
     }
 }
@@ -147,7 +148,7 @@ extension Stack.Small where Element: Copyable {
     @inlinable
     public mutating func drain(_ body: (consuming Element) -> Void) {
         while !isEmpty {
-            body(_buffer.remove.last())
+            body(_buffer.removeLast())
         }
     }
 

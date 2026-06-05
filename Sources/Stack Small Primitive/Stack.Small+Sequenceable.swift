@@ -10,6 +10,7 @@
 // ===----------------------------------------------------------------------===//
 
 public import Stack_Primitive
+public import Storage_Small_Primitives
 public import Memory_Heap_Primitives
 public import Storage_Contiguous_Primitives
 public import Storage_Heap_Primitives
@@ -28,7 +29,7 @@ extension Stack.Small where Element: Copyable {
 
     /// A single-pass consuming iterator in bottom-to-top order. Witness for `Sequenceable`.
     @inlinable
-    public consuming func makeIterator() -> Buffer<Storage<Element>.Contiguous<Memory.Heap<Element>>>.Linear.Small<inlineCapacity>.Scalar {
+    public consuming func makeIterator() -> Buffer<Storage<Element>.Small<inlineCapacity>>.Linear.Scalar {
         _buffer.makeIterator()
     }
 }

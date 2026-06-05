@@ -10,10 +10,9 @@
 // ===----------------------------------------------------------------------===//
 
 public import Stack_Primitive
-public import Memory_Heap_Primitives
-public import Storage_Contiguous_Primitives
-public import Storage_Heap_Primitives
-public import Buffer_Linear_Small_Primitive
+public import Buffer_Linear_Primitive
+public import Storage_Small_Primitives
+public import Storage_Primitive
 
 extension Stack where Element: ~Copyable {
 
@@ -62,7 +61,7 @@ extension Stack where Element: ~Copyable {
     @frozen
     public struct Small<let inlineCapacity: Int>: ~Copyable {
         @usableFromInline
-        package var _buffer: Buffer<Storage<Element>.Contiguous<Memory.Heap<Element>>>.Linear.Small<inlineCapacity>
+        package var _buffer: Buffer<Storage<Element>.Small<inlineCapacity>>.Linear
 
         /// Creates an empty small stack.
         @inlinable
@@ -72,7 +71,7 @@ extension Stack where Element: ~Copyable {
 
         /// Whether the stack is currently using heap storage.
         @inlinable
-        public var isSpilled: Bool { _buffer.isSpilled }
+        public var isSpilled: Bool { _buffer.substrate.isSpilled }
     }
 }
 

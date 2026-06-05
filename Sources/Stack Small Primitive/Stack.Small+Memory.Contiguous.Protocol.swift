@@ -10,6 +10,7 @@
 // ===----------------------------------------------------------------------===//
 
 public import Stack_Primitive
+public import Storage_Small_Primitives
 public import Span_Protocol_Primitives
 public import Buffer_Linear_Small_Primitive
 

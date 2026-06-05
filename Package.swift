@@ -124,6 +124,10 @@ let package = Package(
                 .product(name: "Buffer Linear Primitive", package: "swift-buffer-linear-primitives"),
                 .product(name: "Buffer Linear Small Primitive", package: "swift-buffer-linear-primitives"),
                 .product(name: "Buffer Linear Small Primitives", package: "swift-buffer-linear-primitives"),
+                // Cleave-3 #12a/#5a: Stack.Small now composes Buffer<Storage<E>.Small<n>>.Linear (the
+                // absorbed substrate), not the Buffer.Linear.Small variant.
+                .product(name: "Storage Small Primitives", package: "swift-storage-primitives"),
+                .product(name: "Storage Primitive", package: "swift-storage-primitives"),
                 .product(name: "Storage Heap Primitives", package: "swift-storage-primitives"),
                 .product(name: "Storage Contiguous Primitives", package: "swift-storage-primitives"),
                 .product(name: "Memory Heap Primitives", package: "swift-memory-heap-primitives"),
@@ -183,6 +187,10 @@ let package = Package(
                 .product(name: "Buffer Linear Primitive", package: "swift-buffer-linear-primitives"),
                 .product(name: "Buffer Linear Small Primitive", package: "swift-buffer-linear-primitives"),
                 .product(name: "Buffer Linear Small Primitives", package: "swift-buffer-linear-primitives"),
+                // Cleave-3 #12a/#5a: Stack.Small now composes Buffer<Storage<E>.Small<n>>.Linear (the
+                // absorbed substrate), not the Buffer.Linear.Small variant.
+                .product(name: "Storage Small Primitives", package: "swift-storage-primitives"),
+                .product(name: "Storage Primitive", package: "swift-storage-primitives"),
                 .product(name: "Storage Heap Primitives", package: "swift-storage-primitives"),
                 .product(name: "Storage Contiguous Primitives", package: "swift-storage-primitives"),
                 .product(name: "Memory Heap Primitives", package: "swift-memory-heap-primitives"),
