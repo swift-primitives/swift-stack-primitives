@@ -84,14 +84,14 @@ public struct Stack<Element: ~Copyable>: ~Copyable {
     /// sequence/collection-family conformances in the ops module reach this
     /// storage only through the public `span` / `makeIterator` witnesses.
     @usableFromInline
-    package var _buffer: Buffer<Storage<Element>.Heap>.Linear
+    package var _buffer: Buffer<Storage<Element>.Contiguous<Memory.Heap<Element>>>.Linear
 
     /// Creates an empty stack.
     ///
     /// No allocation occurs until the first push.
     @inlinable
     public init() {
-        self._buffer = Buffer<Storage<Element>.Heap>.Linear(minimumCapacity: .zero)
+        self._buffer = Buffer<Storage<Element>.Contiguous<Memory.Heap<Element>>>.Linear(minimumCapacity: .zero)
     }
 
     // Note: init(_ elements: Swift.Sequence) is in Stack Primitives (ops)
@@ -105,7 +105,7 @@ public struct Stack<Element: ~Copyable>: ~Copyable {
     /// - Parameter capacity: Number of elements to reserve space for.
     @inlinable
     public init(reservingCapacity capacity: Index.Count) {
-        self._buffer = Buffer<Storage<Element>.Heap>.Linear(minimumCapacity: capacity)
+        self._buffer = Buffer<Storage<Element>.Contiguous<Memory.Heap<Element>>>.Linear(minimumCapacity: capacity)
     }
 }
 
@@ -126,7 +126,7 @@ extension Stack: Copyable where Element: Copyable {}
 /// `Stack` is `~Copyable` (move-only), so at most one owner exists at any point.
 /// Sending across threads is sound because the compiler enforces that the
 /// sender loses access after the move — there is no aliasing to race on.
-/// The internal `Buffer<Storage<Element>.Heap>.Linear` is owned exclusively by the stack
+/// The internal `Buffer<Storage<Element>.Contiguous<Memory.Heap<Element>>>.Linear` is owned exclusively by the stack
 /// and moves with it.
 ///
 /// ## Intended Use

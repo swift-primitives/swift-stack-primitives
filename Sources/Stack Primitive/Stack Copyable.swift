@@ -10,6 +10,8 @@
 // ===----------------------------------------------------------------------===//
 
 public import Buffer_Linear_Primitive
+public import Memory_Heap_Primitives
+public import Storage_Contiguous_Primitives
 public import Storage_Heap_Primitives
 public import Buffer_Linear_Primitives
 import Index_Primitives
@@ -55,7 +57,7 @@ extension Stack where Element: Copyable {
         _buffer.remove.all()
 
         if !keepingCapacity {
-            _buffer = Buffer<Storage<Element>.Heap>.Linear(minimumCapacity: .zero)
+            _buffer = Buffer<Storage<Element>.Contiguous<Memory.Heap<Element>>>.Linear(minimumCapacity: .zero)
         }
     }
 }
@@ -114,11 +116,11 @@ extension Stack where Element: Copyable {
         guard _buffer.capacity > currentCount else { return }
 
         if currentCount == .zero {
-            _buffer = Buffer<Storage<Element>.Heap>.Linear(minimumCapacity: .zero)
+            _buffer = Buffer<Storage<Element>.Contiguous<Memory.Heap<Element>>>.Linear(minimumCapacity: .zero)
             return
         }
 
-        var newBuffer = Buffer<Storage<Element>.Heap>.Linear(minimumCapacity: currentCount)
+        var newBuffer = Buffer<Storage<Element>.Contiguous<Memory.Heap<Element>>>.Linear(minimumCapacity: currentCount)
         var idx: Index = .zero
         let end = currentCount.map(Ordinal.init)
         while idx < end {
