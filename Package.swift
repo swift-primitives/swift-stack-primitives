@@ -28,8 +28,9 @@ let package = Package(
         .library(name: "Stack Primitives Test Support", targets: ["Stack Primitives Test Support"]),
     ],
     dependencies: [
-        .package(url: "https://github.com/swift-primitives/swift-memory-small-primitives.git", branch: "main"),
         .package(url: "https://github.com/swift-primitives/swift-index-primitives.git", branch: "main"),
+        .package(url: "https://github.com/swift-primitives/swift-column-primitives.git", branch: "main"),
+        .package(url: "https://github.com/swift-primitives/swift-shared-primitives.git", branch: "main"),
         // W2 mesh: buffer packages on their  worktrees so every path to memory
         // unifies on identity swift-memory-primitives (collision resolved).
         .package(url: "https://github.com/swift-primitives/swift-buffer-primitives.git", branch: "main"),
@@ -56,12 +57,13 @@ let package = Package(
         .target(
             name: "Stack Primitive",
             dependencies: [
+                .product(name: "Column Primitives", package: "swift-column-primitives"),
+                .product(name: "Shared Primitive", package: "swift-shared-primitives"),
                 .product(name: "Equation Primitives Standard Library Integration", package: "swift-equation-primitives"),
                 .product(name: "Hash Primitives Standard Library Integration", package: "swift-hash-primitives"),
                 .product(name: "Index Primitives", package: "swift-index-primitives"),
                 .product(name: "Buffer Linear Primitive", package: "swift-buffer-linear-primitives"),
                 .product(name: "Buffer Linear Primitives", package: "swift-buffer-linear-primitives"),
-                .product(name: "Storage Contiguous Primitives", package: "swift-storage-primitives"),
                 .product(name: "Storage Contiguous Primitives", package: "swift-storage-primitives"),
                 .product(name: "Memory Heap Primitives", package: "swift-memory-heap-primitives"),
                 .product(name: "Memory Contiguous Primitives", package: "swift-memory-primitives"),
@@ -74,14 +76,15 @@ let package = Package(
         .target(
             name: "Stack Bounded Primitive",
             dependencies: [
-                .product(name: "Equation Primitives Standard Library Integration", package: "swift-equation-primitives"),
-                .product(name: "Hash Primitives Standard Library Integration", package: "swift-hash-primitives"),
+                .product(name: "Column Primitives", package: "swift-column-primitives"),
+                .product(name: "Shared Primitive", package: "swift-shared-primitives"),
+                .product(name: "Equation Protocol Primitives", package: "swift-equation-primitives"),
+                .product(name: "Hash Protocol Primitives", package: "swift-hash-primitives"),
                 "Stack Primitive",
                 .product(name: "Index Primitives", package: "swift-index-primitives"),
                 .product(name: "Buffer Linear Primitive", package: "swift-buffer-linear-primitives"),
                 .product(name: "Buffer Linear Bounded Primitive", package: "swift-buffer-linear-primitives"),
                 .product(name: "Buffer Linear Bounded Primitives", package: "swift-buffer-linear-primitives"),
-                .product(name: "Storage Contiguous Primitives", package: "swift-storage-primitives"),
                 .product(name: "Storage Contiguous Primitives", package: "swift-storage-primitives"),
                 .product(name: "Memory Heap Primitives", package: "swift-memory-heap-primitives"),
                 .product(name: "Memory Contiguous Primitives", package: "swift-memory-primitives"),
@@ -98,12 +101,13 @@ let package = Package(
         .target(
             name: "Stack Bounded Primitives",
             dependencies: [
+                .product(name: "Column Primitives", package: "swift-column-primitives"),
+                .product(name: "Shared Primitive", package: "swift-shared-primitives"),
                 "Stack Bounded Primitive",
                 "Stack Primitive",
                 .product(name: "Index Primitives", package: "swift-index-primitives"),
                 .product(name: "Buffer Linear Bounded Primitive", package: "swift-buffer-linear-primitives"),
                 .product(name: "Buffer Linear Bounded Primitives", package: "swift-buffer-linear-primitives"),
-                .product(name: "Storage Contiguous Primitives", package: "swift-storage-primitives"),
                 .product(name: "Storage Contiguous Primitives", package: "swift-storage-primitives"),
                 .product(name: "Memory Heap Primitives", package: "swift-memory-heap-primitives"),
                 .product(name: "Sequence Primitives", package: "swift-sequence-primitives"),
@@ -122,13 +126,14 @@ let package = Package(
         .target(
             name: "Stack Primitives",
             dependencies: [
+                .product(name: "Column Primitives", package: "swift-column-primitives"),
+                .product(name: "Shared Primitive", package: "swift-shared-primitives"),
                 "Stack Primitive",
                 "Stack Bounded Primitive",
                 "Stack Bounded Primitives",
                 .product(name: "Index Primitives", package: "swift-index-primitives"),
                 .product(name: "Buffer Linear Primitive", package: "swift-buffer-linear-primitives"),
                 .product(name: "Buffer Linear Primitives", package: "swift-buffer-linear-primitives"),
-                .product(name: "Storage Contiguous Primitives", package: "swift-storage-primitives"),
                 .product(name: "Storage Contiguous Primitives", package: "swift-storage-primitives"),
                 .product(name: "Memory Heap Primitives", package: "swift-memory-heap-primitives"),
                 .product(name: "Sequence Primitives", package: "swift-sequence-primitives"),

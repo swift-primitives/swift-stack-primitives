@@ -13,6 +13,8 @@ public import Stack_Primitive
 public import Storage_Contiguous_Primitives
 public import Buffer_Linear_Bounded_Primitive
 public import Index_Primitives
+public import Column_Primitives
+public import Shared_Primitive
 
 extension Stack where Element: ~Copyable {
 
@@ -42,12 +44,16 @@ extension Stack where Element: ~Copyable {
     /// - Overflow should be an explicit error
     ///
     /// For unbounded growth, use ``Stack`` (the canonical type).
-    /// For compile-time capacity with zero heap allocation, use ``Stack/Static``.
     ///
     /// ## Iteration
     ///
-    /// When `Element` is `Copyable`, `Stack.Bounded` conforms to `Sequenceable`;
-    /// it always conforms to `Iterable` (use `forEach`):
+    /// Element traversal is scoped: `forEach` (ops module) and the scoped span
+    /// forms (`withSpan` / `withMutableSpan`) borrow the elements in
+    /// bottom-to-top order. The protocol-lattice memberships
+    /// (`Iterable` / `Sequenceable`) are withdrawn at the A-1 interim reshape —
+    /// the stored `Shared` column has no returning span or consuming
+    /// extraction; they re-materialize when `Shared` gains those surfaces
+    /// upstream (recorded as future work).
     ///
     /// ```swift
     /// var stack = Stack<Int>.Bounded(capacity: 10)
@@ -58,8 +64,14 @@ extension Stack where Element: ~Copyable {
     ///
     /// ## Copy-on-Write
     ///
-    /// When `Element` is `Copyable`, `Stack.Bounded` uses copy-on-write semantics:
-    /// copies share storage until mutation, providing efficient value semantics.
+    /// When `Element` is `Copyable`, `Stack.Bounded` uses copy-on-write
+    /// semantics: copies share storage until mutation, providing efficient
+    /// value semantics. The CoW machinery is the ratified `Shared` column (the
+    /// W4/W5 tower design): the stored bounded buffer rides a refcounted box
+    /// whose uniqueness gate (`withUnique`) runs before every mutation, and the
+    /// CoW detach clones CAPACITY-PRESERVINGLY (a shrink-to-fit copy would
+    /// break the bounded capacity contract). For `~Copyable` elements the
+    /// stack is move-only and the gate is a no-op.
     ///
     /// ## Move-Only Support
     ///
@@ -75,22 +87,72 @@ extension Stack where Element: ~Copyable {
     // WHY: Sendable due to a stored pointer / generic parameter shape.
     @safe
     public struct Bounded: ~Copyable {
+        /// Element storage: the `Shared` column over the fixed-capacity heap
+        /// buffer (`Column.Bounded<Element>` = `Buffer.Linear.Bounded` over
+        /// system-allocated contiguous storage).
+        ///
+        /// Conditional copyability flows from the column (`Shared<E, B>` is
+        /// `Copyable` iff `E` is), and value semantics ride the ratified CoW
+        /// box — the A-1 interim reshape (public element-generic API
+        /// preserved; the hand-rolled `ensureUnique` CoW is deleted).
+        ///
+        /// `@usableFromInline package` ([MOD-036] refined-C): the hot
+        /// `~Copyable`/`Copyable` operation surface co-located in this (type)
+        /// module inlines cross-package to zero-witness-dispatch; the cold
+        /// sequence-family ops in the ops module reach this storage through
+        /// the same package-visible field.
         @usableFromInline
-        package var _buffer: Buffer<Storage<Element>.Contiguous<Memory.Heap<Element>>>.Linear.Bounded
+        package var _buffer: Shared<Element, Column.Bounded<Element>>
 
         /// The requested capacity (for overflow checking).
-        public let requestedCapacity: Stack<Element>.Index.Count
-
-        /// Creates a stack with the specified capacity.
         ///
-        /// - Parameter capacity: Maximum number of elements.
-        @inlinable
-        public init(capacity: Stack<Element>.Index.Count) {
-            self._buffer = Buffer<Storage<Element>.Contiguous<Memory.Heap<Element>>>.Linear.Bounded(
-                minimumCapacity: capacity
-            )
-            self.requestedCapacity = capacity
-        }
+        /// The underlying storage may round its physical capacity up; this
+        /// stored bound is the stack's contract — `push` rejects at exactly
+        /// this count.
+        public let requestedCapacity: Index_Primitives.Index<Element>.Count
+    }
+}
+
+// MARK: - Construction (Copyable twins — the clone-capturing sites)
+
+// `Shared`'s constructors split on element copyability: the `Copyable` overload
+// captures the column's deep-copy strategy — the CAPACITY-PRESERVING
+// `Buffer.Linear.Bounded.clone()` — so a shared box can restore uniqueness; the
+// `~Copyable` overload captures none. The split must surface at STACK
+// construction too — a `Copyable`-element stack constructed through the
+// `~Copyable` path would carry a box that cannot restore uniqueness. At
+// `Copyable` call sites the more-constrained twin wins.
+//
+// BOTH twins live in extensions (not the struct body): a struct-body member of
+// the extension-nested `Bounded` and a `where Element: Copyable` extension
+// member mangle to the SAME symbol on 6.3.2 (the redundant-with-default
+// `Copyable` requirement is dropped from the extension's mangled signature) —
+// the extension/extension split is the coexisting spelling (the
+// `withMutableSpan` precedent on the growable type).
+
+extension Stack.Bounded where Element: ~Copyable {
+    /// Creates a stack of move-only elements with the specified capacity.
+    ///
+    /// The column is statically unique (no clone strategy exists for
+    /// `~Copyable` elements; the wrapper cannot be duplicated).
+    ///
+    /// - Parameter capacity: Maximum number of elements.
+    @inlinable
+    public init(capacity: Index_Primitives.Index<Element>.Count) {
+        self._buffer = Shared(Column.Bounded<Element>(minimumCapacity: capacity))
+        self.requestedCapacity = capacity
+    }
+}
+
+extension Stack.Bounded where Element: Copyable {
+    /// Creates a stack with the specified capacity (CoW-capable column; the
+    /// capacity-preserving clone strategy is captured here).
+    ///
+    /// - Parameter capacity: Maximum number of elements.
+    @inlinable
+    public init(capacity: Index_Primitives.Index<Element>.Count) {
+        self._buffer = Shared(Column.Bounded<Element>(minimumCapacity: capacity))
+        self.requestedCapacity = capacity
     }
 }
 
@@ -98,19 +160,22 @@ extension Stack where Element: ~Copyable {
 
 /// `Stack.Bounded` is `Copyable` when its elements are `Copyable`.
 ///
-/// This enables value semantics with copy-on-write optimization:
-/// copies share storage until mutation.
+/// Copyability flows from the stored column: `Shared<Element, B>` is
+/// `Copyable` exactly when `Element` is. Copies share the box until the first
+/// mutation restores uniqueness (the `withUnique` gate).
 extension Stack.Bounded: Copyable where Element: Copyable {}
 
 // MARK: - Sendable
 
-/// Sendable conformance for `Stack.Bounded`.
+/// `Stack.Bounded` is `Sendable` when its elements are `Sendable`.
 ///
 /// ## Safety Invariant
 ///
-/// `Stack.Bounded` is `~Copyable`. Single ownership is enforced by the type
-/// system; the fixed-capacity `Buffer<Storage<Element>.Contiguous<Memory.Heap<Element>>>.Linear.Bounded` it owns
-/// transfers with it across isolation boundaries.
+/// The stored `Shared` column is mutated exclusively through its uniqueness
+/// gate (`withUnique` restores uniqueness FIRST), so a box shared between two
+/// `Copyable`-element stack values is never written while shared — the stdlib
+/// CoW-Sendable discipline. For `~Copyable` elements the stack is move-only:
+/// at most one owner exists, and the box moves with it.
 ///
 /// ## Intended Use
 ///
@@ -121,6 +186,6 @@ extension Stack.Bounded: Copyable where Element: Copyable {}
 /// ## Non-Goals
 ///
 /// - Not a shared concurrent stack — external synchronization required.
-/// - Does not guarantee overflow safety under concurrent push; single-owner
-///   mutation is required.
+/// - Does not guarantee overflow safety under concurrent push; mutation
+///   requires exclusive access to the stack value itself.
 extension Stack.Bounded: @unsafe @unchecked Sendable where Element: Sendable {}

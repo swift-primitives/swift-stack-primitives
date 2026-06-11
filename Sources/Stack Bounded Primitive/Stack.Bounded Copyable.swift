@@ -10,76 +10,37 @@
 // ===----------------------------------------------------------------------===//
 
 public import Stack_Primitive
-public import Buffer_Linear_Bounded_Primitives
+public import Buffer_Linear_Bounded_Primitive
+public import Storage_Contiguous_Primitives
+public import Memory_Heap_Primitives
+public import Shared_Primitive
+import Index_Primitives
 import Ordinal_Primitives
 
-// MARK: - Copy-on-Write (Copyable elements only)
-
-extension Stack.Bounded where Element: Copyable {
-    /// Pushes an element onto the stack (CoW-aware).
-    @inlinable
-    public mutating func push(_ element: Element) throws(__StackBoundedError<Element>) {
-        guard _buffer.count < requestedCapacity else {
-            throw .overflow
-        }
-        if let rejected = _buffer.append(element) {
-            _ = rejected
-            throw .overflow
-        }
-    }
-
-    /// Pops and returns the top element, or nil if empty (CoW-aware).
-    @inlinable
-    public mutating func pop() -> Element? {
-        guard !_buffer.isEmpty else {
-            return nil
-        }
-        return _buffer.remove.last()
-    }
-
-    /// Removes all elements from the stack (CoW-aware).
-    @inlinable
-    public mutating func clear() {
-        _buffer.remove.all()
-    }
-}
+// The `Copyable`-element extras: surfaces that COPY elements out (`peek()`) or
+// drain with ownership transfer. The former CoW SHADOWS of the base ops
+// (`push` / `pop` / `clear` / `truncate` / the mutable span) are deleted: the
+// base bodies cross the `Shared` column through the `withUnique` gate, which
+// IS the CoW restore for `Copyable` elements — one body now serves both lanes
+// (the A-1 reshape).
 
 // MARK: - Peek
 
 extension Stack.Bounded where Element: Copyable {
     /// Returns the top element without removing it, or nil if empty.
+    ///
+    /// This is a convenience method for `Copyable` elements. For `~Copyable`
+    /// elements, use ``peek(_:)`` with a closure.
+    ///
+    /// - Returns: A copy of the top element, or `nil` if the stack is empty.
+    /// - Complexity: O(1)
     @inlinable
     public func peek() -> Element? {
-        guard !_buffer.isEmpty else {
+        guard !isEmpty else {
             return nil
         }
         let topIndex = _buffer.count.subtract.saturating(.one).map(Ordinal.init)
         return _buffer[topIndex]
-    }
-}
-
-// MARK: - CoW-aware MutableSpan (Copyable elements)
-
-extension Stack.Bounded where Element: Copyable {
-    /// A mutable view of the stack's elements (CoW-aware).
-    ///
-    /// Forwards `Buffer.Linear.Bounded`'s form-α `mutableSpan()` *method* (D1).
-    @inlinable
-    public var mutableSpan: MutableSpan<Element> {
-        @_lifetime(&self)
-        mutating get {
-            _buffer.mutableSpan()
-        }
-    }
-}
-
-// MARK: - CoW-aware Truncate (Copyable elements)
-
-extension Stack.Bounded where Element: Copyable {
-    /// Removes elements beyond the specified count (CoW-aware).
-    @inlinable
-    public mutating func truncate(to newCount: Stack<Element>.Index.Count) {
-        _buffer.truncate(to: newCount)
     }
 }
 
@@ -95,21 +56,35 @@ extension Stack.Bounded where Element: Copyable {
     /// - Complexity: O(n) where n is the number of elements.
     @inlinable
     public mutating func drain(_ body: (consuming Element) -> Void) {
-        _buffer.ensureUnique()
-        while !_buffer.isEmpty {
-            body(_buffer.remove.last())
+        _buffer.withUnique { column in
+            while !column.isEmpty {
+                body(column.remove.last())
+            }
         }
     }
 
     /// Drains elements in LIFO order while the predicate returns true.
+    ///
+    /// Repeatedly peeks at the top element; if the predicate returns true,
+    /// pops (consumes) the element and passes it to body; if false, stops.
+    /// The stack survives with remaining elements intact.
+    ///
+    /// - Parameters:
+    ///   - predicate: A closure that receives a borrowed reference to the top element.
+    ///     Return `true` to drain it, `false` to stop.
+    ///   - body: A closure that receives each drained element with ownership.
+    /// - Complexity: O(k) where k is the number of elements drained.
     @inlinable
     public mutating func drain(
         while predicate: (borrowing Element) -> Bool,
         _ body: (consuming Element) -> Void
     ) {
-        _buffer.ensureUnique()
-        while let element = peek(), predicate(element) {
-            body(pop()!)
+        _buffer.withUnique { column in
+            while !column.isEmpty {
+                let topIndex = column.count.subtract.saturating(.one).map(Ordinal.init)
+                guard predicate(column[topIndex]) else { return }
+                body(column.remove.last())
+            }
         }
     }
 }

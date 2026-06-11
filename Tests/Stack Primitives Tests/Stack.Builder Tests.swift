@@ -303,6 +303,23 @@ extension StackBuilderTests.Integration {
         let popped = StackBuilderTests.collectedPopOrder(stack)
         #expect(popped.count == 3)
     }
+
+    @Test
+    func `Builder-built Copyable stack supports CoW copies`() {
+        // Regression: the constructing grammar's Copyable twins capture the
+        // clone strategy — a copy of a builder-built stack must detach on
+        // mutation, not trap on a clone-less shared box.
+        let original = Stack<Int> {
+            1
+            2
+        }
+        var copy = original
+        copy.push(3)
+        #expect(copy.pop() == 3)
+        #expect(copy.pop() == 2)
+        let originalTop = original.peek()
+        #expect(originalTop == 2)  // original untouched
+    }
 }
 
 // MARK: - NonCopyable

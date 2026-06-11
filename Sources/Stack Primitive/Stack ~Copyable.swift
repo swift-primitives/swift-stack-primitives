@@ -12,10 +12,16 @@
 public import Buffer_Linear_Primitive
 public import Memory_Heap_Primitives
 public import Storage_Contiguous_Primitives
-public import Storage_Contiguous_Primitives
-public import Buffer_Linear_Primitives
+public import Shared_Primitive
 import Index_Primitives
 import Ordinal_Primitives
+
+// The base operation surface, generic over element copyability. Every mutation
+// crosses the stored `Shared` column through the gate-first scoped accessor
+// (`withUnique` — a no-op gate on the statically-unique `~Copyable`-element
+// lane, the CoW restore on the `Copyable`-element lane), so ONE body serves
+// both lanes; the hand-rolled `ensureUnique` CoW and its `Copyable` shadow
+// methods are deleted (the A-1 reshape — `Shared` supplies CoW).
 
 // MARK: - Properties
 
@@ -44,32 +50,37 @@ extension Stack where Element: ~Copyable {
     /// - Parameter minimumCapacity: The minimum total capacity to reserve.
     @inlinable
     public mutating func reserve(_ minimumCapacity: Index.Count) {
-        _buffer.reserveCapacity(minimumCapacity)
+        _buffer.withUnique { $0.reserveCapacity(minimumCapacity) }
     }
 }
 
-// MARK: - Core Operations (Base - for ~Copyable elements)
+// MARK: - Core Operations
 
 extension Stack where Element: ~Copyable {
     /// Pushes an element onto the stack.
     ///
     /// - Parameter element: The element to push.
-    /// - Complexity: O(1) amortized
+    /// - Complexity: O(1) amortized, O(n) if a CoW copy is triggered
     @inlinable
     public mutating func push(_ element: consuming Element) {
-        _buffer.append(element)
+        // The payload-threading form: a `consuming` parameter cannot be
+        // consumed inside a closure capture ([MEM-OWN-017]), so the element
+        // crosses the box as a `consuming` closure PARAMETER.
+        _buffer.withUnique(consuming: element) { column, element in
+            column.append(element)
+        }
     }
 
     /// Pops and returns the top element, or nil if empty.
     ///
     /// - Returns: The top element, or `nil` if the stack is empty.
-    /// - Complexity: O(1)
+    /// - Complexity: O(1), O(n) if a CoW copy is triggered
     @inlinable
     public mutating func pop() -> Element? {
-        guard !_buffer.isEmpty else {
+        guard !isEmpty else {
             return nil
         }
-        return _buffer.remove.last()
+        return _buffer.withUnique { .some($0.removeLast()) }
     }
 
     /// Removes all elements from the stack.
@@ -79,11 +90,7 @@ extension Stack where Element: ~Copyable {
     /// - Complexity: O(n) where n is the number of elements.
     @inlinable
     public mutating func clear(keepingCapacity: Bool = true) {
-        _buffer.remove.all()
-
-        if !keepingCapacity {
-            _buffer = Buffer<Storage<Element>.Contiguous<Memory.Heap<Element>>>.Linear(minimumCapacity: .zero)
-        }
+        _buffer.withUnique { $0.removeAll(keepingCapacity: keepingCapacity) }
     }
 }
 
@@ -99,7 +106,7 @@ extension Stack where Element: ~Copyable {
     /// - Complexity: O(1)
     @inlinable
     public func peek<R>(_ body: (borrowing Element) -> R) -> R? {
-        guard !_buffer.isEmpty else {
+        guard !isEmpty else {
             return nil
         }
         let topIndex = _buffer.count.subtract.saturating(.one).map(Ordinal.init)
@@ -107,25 +114,38 @@ extension Stack where Element: ~Copyable {
     }
 }
 
-// MARK: - Span Access
+// MARK: - Scoped Span Access
 
 extension Stack where Element: ~Copyable {
-    /// A mutable view of the stack's elements.
+    /// Calls `body` with a read-only span over the stack's elements in
+    /// bottom-to-top order.
     ///
-    /// Elements are ordered from bottom (index 0) up to the top.
-    /// For Copyable elements, this triggers CoW if needed.
+    /// The scoped form replaces the former `span` property: a returning span
+    /// cannot be forwarded out of the stored `Shared` column's class hop (the
+    /// coroutine-window rule), so the region view is scoped.
     ///
-    /// - Complexity: O(1), O(n) if CoW copy triggered
-    ///
-    /// Forwards the base `Buffer.Linear`'s form-α `mutableSpan()` *method* (D1; the
-    /// underlying property was dropped at the ⑤-(N) reparam — a generic substrate
-    /// cannot vend a forwarding mutable-span property; a Heap-pinned `<E>` method can).
+    /// - Complexity: O(1)
     @inlinable
-    public var mutableSpan: MutableSpan<Element> {
-        @_lifetime(&self)
-        mutating get {
-            _buffer.mutableSpan()
-        }
+    public func withSpan<R, Failure: Swift.Error>(
+        _ body: (Swift.Span<Element>) throws(Failure) -> R
+    ) throws(Failure) -> R {
+        try _buffer.withSpan(body)
+    }
+
+    /// Calls `body` with a mutable span over the stack's elements
+    /// (statically-unique `~Copyable`-element lane).
+    ///
+    /// The scoped form replaces the former `mutableSpan` property (the
+    /// coroutine-window rule, as above). The stack is move-only for
+    /// `~Copyable` elements, so its box is statically unique — the
+    /// assuming-unique lane is sound by construction (the Array precedent).
+    ///
+    /// - Complexity: O(1)
+    @inlinable
+    public mutating func withMutableSpan<R, Failure: Swift.Error>(
+        _ body: (inout Swift.MutableSpan<Element>) throws(Failure) -> R
+    ) throws(Failure) -> R {
+        try _buffer.withMutableSpanAssumingUnique(body)
     }
 }
 
@@ -141,6 +161,6 @@ extension Stack where Element: ~Copyable {
     /// - Complexity: O(k) where k is the number of removed elements.
     @inlinable
     public mutating func truncate(to newCount: Index.Count) {
-        _buffer.truncate(to: newCount)
+        _buffer.withUnique { $0.truncate(to: newCount) }
     }
 }

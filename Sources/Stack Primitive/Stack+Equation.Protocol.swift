@@ -10,15 +10,29 @@
 // ===----------------------------------------------------------------------===//
 
 public import Equation_Primitives_Standard_Library_Integration
+public import Shared_Primitive
+public import Index_Primitives
+import Ordinal_Primitives
 
 // MARK: - Equation.Protocol Conformance
 
 extension Stack: Equation.`Protocol` where Element: Equation.`Protocol` & ~Copyable {
     /// Compares two stacks for element-wise, ordered-sequence equality
-    /// (bottom-to-top), over the span (`Span: Equation.Protocol`, equation-primitives
-    /// Standard Library Integration).
+    /// (bottom-to-top).
+    ///
+    /// Walks the live prefix through the column's seam subscript (the stored
+    /// `Shared` column has no returning span — the former span-keyed witness
+    /// is re-expressed as the seam walk, mirroring `Shared`'s own
+    /// element-keyed carriers).
     @inlinable
     public static func == (lhs: borrowing Self, rhs: borrowing Self) -> Bool {
-        lhs.span == rhs.span
+        guard lhs._buffer.count == rhs._buffer.count else { return false }
+        var slot: Index = .zero
+        let end = lhs._buffer.count.map(Ordinal.init)
+        while slot < end {
+            guard lhs._buffer[slot] == rhs._buffer[slot] else { return false }
+            slot += .one
+        }
+        return true
     }
 }

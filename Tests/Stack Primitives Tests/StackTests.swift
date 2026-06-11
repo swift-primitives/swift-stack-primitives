@@ -102,17 +102,20 @@ struct StackBoundedTests {
     }
 
     @Test
-    func `Span provides read-only access`() throws {
+    func `Scoped span provides read-only access`() throws {
         var stack = Stack<Int>.Bounded(capacity: 5)
         try stack.push(1)
         try stack.push(2)
         try stack.push(3)
 
-        let span = stack.span
-        #expect(span.count == 3)
-        #expect(span[0] == 1)  // Bottom
-        #expect(span[1] == 2)
-        #expect(span[2] == 3)  // Top
+        // The returning `span` property is withdrawn at the A-1 reshape (the
+        // stored Shared column has no returning span); the scoped form replaces it.
+        stack.withSpan { span in
+            #expect(span.count == 3)
+            #expect(span[0] == 1)  // Bottom
+            #expect(span[1] == 2)
+            #expect(span[2] == 3)  // Top
+        }
     }
 
     @Test
@@ -138,6 +141,27 @@ struct StackBoundedTests {
         let peeked: Int? = stack.peek()
         #expect(peeked == 2)
         #expect(stack.count == 2)  // Still has 2 elements
+    }
+
+    @Test
+    func `Copies share storage until mutation, and the CoW detach preserves capacity`() throws {
+        var a = Stack<Int>.Bounded(capacity: 4)
+        try a.push(1)
+        try a.push(2)
+
+        // Copy shares the box; the first mutation of `b` detaches through the
+        // CAPACITY-PRESERVING clone (a shrink-to-fit copy would make the
+        // in-contract pushes below overflow).
+        var b = a
+        try b.push(3)
+        #expect(a.count == 2)  // a untouched by b's mutation
+        #expect(b.count == 3)
+        #expect(b.capacity == 4)
+
+        try b.push(4)  // still in-contract after the detach
+        #expect(b.isFull == true)
+        #expect(a.peek() == 2)
+        #expect(b.peek() == 4)
     }
 }
 
@@ -259,17 +283,20 @@ struct StackTests {
     }
 
     @Test
-    func `Span provides read-only access`() {
+    func `Scoped span provides read-only access`() {
         var stack = Stack<Int>()
         stack.push(1)
         stack.push(2)
         stack.push(3)
 
-        let span = stack.span
-        #expect(span.count == 3)
-        #expect(span[0] == 1)  // Bottom
-        #expect(span[1] == 2)
-        #expect(span[2] == 3)  // Top
+        // The returning `span` property is withdrawn at the A-1 reshape (the
+        // stored Shared column has no returning span); the scoped form replaces it.
+        stack.withSpan { span in
+            #expect(span.count == 3)
+            #expect(span[0] == 1)  // Bottom
+            #expect(span[1] == 2)
+            #expect(span[2] == 3)  // Top
+        }
     }
 
     @Test

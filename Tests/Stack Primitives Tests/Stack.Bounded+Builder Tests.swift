@@ -32,6 +32,19 @@ extension StackBoundedBuilderTests.Within {
         var s = try Stack<Int>.Bounded(capacity: 8) { 1; 2; 3 }
         #expect(s.pop() == 3)
     }
+
+    @Test
+    func `builder-built Copyable bounded stack supports CoW copies`() throws {
+        // Regression: the Copyable builder-init twin constructs through the
+        // clone-capturing path — a copy of a builder-built bounded stack must
+        // detach on mutation, not trap on a clone-less shared box.
+        let original = try Stack<Int>.Bounded(capacity: 4) { 1; 2 }
+        var copy = original
+        try copy.push(3)
+        #expect(copy.pop() == 3)
+        let originalTop = original.peek()
+        #expect(originalTop == 2)  // original untouched
+    }
 }
 
 extension StackBoundedBuilderTests.Overflow {

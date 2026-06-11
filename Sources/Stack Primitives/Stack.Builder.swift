@@ -11,6 +11,7 @@
 
 public import Buffer_Linear_Primitives
 public import Stack_Primitive
+public import Shared_Primitive
 
 extension Stack where Element: ~Copyable {
     /// A result builder for declaratively constructing stacks.
@@ -66,33 +67,20 @@ extension Stack where Element: ~Copyable {
     @resultBuilder
     public enum Builder {
 
-        // MARK: - Expression Building
+        // The PASS-THROUGH / MERGE grammar lives in the enum body — these
+        // functions never construct a stack, so they are lane-agnostic. The
+        // CONSTRUCTING functions live in the paired extensions below (the
+        // constructing-twin treatment): construction is where copyability
+        // evidence lives, and the `Copyable` twins capture the column's clone
+        // strategy.
 
-        @inlinable
-        public static func buildExpression(
-            _ expression: consuming Element
-        ) -> Stack<Element> {
-            var result = Stack<Element>()
-            result.push(consume expression)
-            return result
-        }
+        // MARK: - Expression Building (pass-through)
 
         @inlinable
         public static func buildExpression(
             _ expression: consuming Stack<Element>
         ) -> Stack<Element> {
             consume expression
-        }
-
-        @inlinable
-        public static func buildExpression(
-            _ expression: consuming Element?
-        ) -> Stack<Element> {
-            var result = Stack<Element>()
-            if let value = consume expression {
-                result.push(consume value)
-            }
-            return result
         }
 
         // MARK: - Partial Block Building
@@ -102,13 +90,6 @@ extension Stack where Element: ~Copyable {
             first: consuming Stack<Element>
         ) -> Stack<Element> {
             consume first
-        }
-
-        @inlinable
-        public static func buildPartialBlock(
-            first: Void
-        ) -> Stack<Element> {
-            Stack<Element>()
         }
 
         @inlinable
@@ -124,31 +105,16 @@ extension Stack where Element: ~Copyable {
             var result = consume accumulated
             var rest = consume next
             // Drain rest from the bottom (oldest-pushed first) so push order
-            // is preserved when re-pushed onto result.
+            // is preserved when re-pushed onto result. The front removal
+            // crosses rest's Shared column through the gate-first scoped
+            // accessor (a no-op gate on the statically-unique lane).
             while !rest._buffer.isEmpty {
-                result.push(rest._buffer.remove.first())
+                result.push(rest._buffer.withUnique { $0.removeFirst() })
             }
             return result
         }
 
-        // MARK: - Block Building
-
-        @inlinable
-        public static func buildBlock() -> Stack<Element> {
-            Stack<Element>()
-        }
-
-        // MARK: - Control Flow
-
-        @inlinable
-        public static func buildOptional(
-            _ component: consuming Stack<Element>?
-        ) -> Stack<Element> {
-            if let result = consume component {
-                return consume result
-            }
-            return Stack<Element>()
-        }
+        // MARK: - Control Flow (pass-through)
 
         @inlinable
         public static func buildEither(
@@ -172,6 +138,129 @@ extension Stack where Element: ~Copyable {
         ) -> Stack<Element> {
             consume component
         }
+    }
+}
+
+// MARK: - Constructing grammar (Copyable twins — the clone-capturing sites)
+
+// Every grammar function that CONSTRUCTS a `Stack<Element>` splits on element
+// copyability, exactly like the type's own inits: a `Stack<Element>()` spelled
+// in a `~Copyable`-element generic context statically resolves to the
+// drain-only constructor, so a `Copyable`-element stack built there would
+// escape with a box that cannot restore uniqueness (the first CoW gate after a
+// copy would trap). At `Copyable` call sites the more-constrained twins win
+// and capture the clone strategy.
+//
+// BOTH lanes live in extensions (not the enum body): an enum-body member of
+// the extension-nested `Builder` and a `where Element: Copyable` extension
+// member mangle to the SAME symbol on 6.3.2 (the redundant-with-default
+// `Copyable` requirement is dropped from the extension's mangled signature) —
+// the extension/extension split is the coexisting spelling (the
+// `withMutableSpan` precedent).
+
+extension Stack.Builder where Element: ~Copyable {
+
+    // MARK: - Expression Building
+
+    @inlinable
+    public static func buildExpression(
+        _ expression: consuming Element
+    ) -> Stack<Element> {
+        var result = Stack<Element>()
+        result.push(consume expression)
+        return result
+    }
+
+    @inlinable
+    public static func buildExpression(
+        _ expression: consuming Element?
+    ) -> Stack<Element> {
+        var result = Stack<Element>()
+        if let value = consume expression {
+            result.push(consume value)
+        }
+        return result
+    }
+
+    // MARK: - Partial Block Building
+
+    @inlinable
+    public static func buildPartialBlock(
+        first: Void
+    ) -> Stack<Element> {
+        Stack<Element>()
+    }
+
+    // MARK: - Block Building
+
+    @inlinable
+    public static func buildBlock() -> Stack<Element> {
+        Stack<Element>()
+    }
+
+    // MARK: - Control Flow
+
+    @inlinable
+    public static func buildOptional(
+        _ component: consuming Stack<Element>?
+    ) -> Stack<Element> {
+        if let result = consume component {
+            return consume result
+        }
+        return Stack<Element>()
+    }
+}
+
+extension Stack.Builder where Element: Copyable {
+
+    // MARK: - Expression Building
+
+    @inlinable
+    public static func buildExpression(
+        _ expression: consuming Element
+    ) -> Stack<Element> {
+        var result = Stack<Element>()
+        result.push(consume expression)
+        return result
+    }
+
+    @inlinable
+    public static func buildExpression(
+        _ expression: consuming Element?
+    ) -> Stack<Element> {
+        var result = Stack<Element>()
+        if let value = consume expression {
+            result.push(consume value)
+        }
+        return result
+    }
+
+    // MARK: - Partial Block Building
+
+    @inlinable
+    public static func buildPartialBlock(
+        first: Void
+    ) -> Stack<Element> {
+        Stack<Element>()
+    }
+
+    // MARK: - Block Building
+
+    @inlinable
+    public static func buildBlock() -> Stack<Element> {
+        Stack<Element>()
+    }
+
+    // MARK: - Control Flow
+
+    @inlinable
+    public static func buildOptional(
+        _ component: consuming Stack<Element>?
+    ) -> Stack<Element> {
+        if let result = consume component {
+            return consume result
+        }
+        return Stack<Element>()
     }
 }
 

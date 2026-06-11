@@ -10,15 +10,30 @@
 // ===----------------------------------------------------------------------===//
 
 public import Stack_Primitive
-public import Hash_Primitives_Standard_Library_Integration
+public import Hash_Protocol_Primitives
+public import Shared_Primitive
+public import Index_Primitives
+import Ordinal_Primitives
 
 // MARK: - Hash.Protocol Conformance
 
 extension Stack.Bounded: Hash.`Protocol` where Element: Hash.`Protocol` & ~Copyable {
-    /// Hashes the count and elements of this bounded stack, in bottom-to-top order,
-    /// over the span (`Span: Hash.Protocol`, hash-primitives Standard Library Integration).
+    /// Hashes the count and elements of this bounded stack, in bottom-to-top
+    /// order.
+    ///
+    /// Walks the live prefix through the column's seam subscript (the stored
+    /// `Shared` column has no returning span — the former span-keyed witness
+    /// is re-expressed as the seam walk, mirroring `Shared`'s own
+    /// element-keyed carriers). Count is combined first so the hash agrees
+    /// with the equality walk's count guard.
     @inlinable
     public borrowing func hash(into hasher: inout Hasher) {
-        span.hash(into: &hasher)
+        hasher.combine(Swift.Int(bitPattern: count))
+        var slot: Index_Primitives.Index<Element> = .zero
+        let end = _buffer.count.map(Ordinal.init)
+        while slot < end {
+            _buffer[slot].hash(into: &hasher)
+            slot += .one
+        }
     }
 }
