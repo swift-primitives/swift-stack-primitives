@@ -27,14 +27,14 @@ import Testing
 //   -O pipeline).
 // — Teardown exactness via atomic ledgers (siblings drop on worker threads).
 //
-// Sendable note (W2-F1's stack twin, recorded in REPORT-…-W2 §2): the stack's
-// `@unchecked Sendable` clause (`Stack.swift:191`) spells `Element: Sendable`
-// bare — implicitly `Copyable` — so only Copyable-element stacks cross task
-// boundaries today; the doc's "~Copyable handoff" intent is not realizable.
-// This suite therefore fans out Copyable-element stacks only. Verified at this
-// leg (compile error preserved below); fix is PROPOSED, not baked:
-//     requireSendable(Stack<MoveOnlyProbe>())   // ← fails: 'MoveOnlyProbe'
-//     // must conform to 'Copyable' (via Stack.swift:191's bare clause)
+// Sendable note (finding W3-F1, FIXED): the stack's `@unchecked Sendable`
+// clause originally spelled `Element: Sendable` bare — implicitly `Copyable` —
+// blocking the doc's "~Copyable handoff" intent (probe-verified at the W3 leg;
+// REPORT-arc-shared-soundness-W3 §1). The `~Copyable` suppression landed with
+// the principal-ratified clause pass; the regression lock lives in
+// `StackSendableSurfaceTests` below. The CONCURRENCY suites still fan out
+// Copyable-element stacks only — siblings are copies, which is structural, not
+// the finding.
 
 private enum Ledger {
     static let created = Atomic<Int>(0)
@@ -200,5 +200,34 @@ struct StackConcurrencyTeardownTests {
         let destroyed = Ledger.destroyed.load(ordering: .sequentiallyConsistent)
         #expect(created == 124)
         #expect(destroyed == created)
+    }
+}
+
+// MARK: - Sendable surface (the W3-F1 regression lock)
+
+/// Move-only Sendable element — the previously-failing compile shape from the
+/// W3 probe, live since the clause fix (`Stack.swift`'s Sendable extension now
+/// suppresses `~Copyable` on the Element bound; W3-F1,
+/// REPORT-arc-shared-soundness-W3 §1).
+private struct MoveOnlyProbe: ~Copyable, Sendable {
+    let id: Int
+    init(_ id: Int) { self.id = id }
+}
+
+private func requireSendable<T: Sendable & ~Copyable>(_ value: borrowing T) {}
+
+@Suite("Stack Sendable surface (W3-F1 regression)")
+struct StackSendableSurfaceTests {
+
+    @Test
+    func `sendable admits move-only elements (W3-F1 regression)`() {
+        var moveOnly = Stack<MoveOnlyProbe>()
+        moveOnly.push(MoveOnlyProbe(1))
+        // The conformance is declared `@unsafe` (its strip is the deferred
+        // [MEM-SAFE-024] sweep), so the use site carries the marker.
+        unsafe requireSendable(moveOnly)
+        let copyable = Stack<Int>()
+        unsafe requireSendable(copyable)
+        #expect(moveOnly.count == 1)
     }
 }

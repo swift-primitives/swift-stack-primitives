@@ -188,4 +188,10 @@ extension Stack: Copyable where Element: Copyable {}
 /// - Does not support concurrent access from multiple threads.
 /// - This conformance does not make arbitrary sharing safe — mutation requires
 ///   exclusive access to the stack value itself.
-extension Stack: @unsafe @unchecked Sendable where Element: Sendable {}
+///
+/// `Element: ~Copyable & Sendable` — the suppression is load-bearing: a bare
+/// `Element: Sendable` clause implicitly requires `Element: Copyable`, which
+/// excluded exactly the move-only handoff documented above (arc-1 finding
+/// W3-F1, REPORT-arc-shared-soundness-W3 §1; fix principal-ratified
+/// 2026-06-11).
+extension Stack: @unsafe @unchecked Sendable where Element: ~Copyable & Sendable {}
