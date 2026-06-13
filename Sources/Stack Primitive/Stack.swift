@@ -83,6 +83,7 @@ public import Shared_Primitive
 // WHY: structurally value-safe but the compiler cannot synthesize
 // WHY: Sendable due to a stored pointer / generic parameter shape.
 @safe
+@frozen
 public struct Stack<Element: ~Copyable>: ~Copyable {
 
     /// Element storage: the `Shared` column over the growable heap buffer

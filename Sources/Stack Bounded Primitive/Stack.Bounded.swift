@@ -86,6 +86,7 @@ extension Stack where Element: ~Copyable {
     // WHY: structurally value-safe but the compiler cannot synthesize
     // WHY: Sendable due to a stored pointer / generic parameter shape.
     @safe
+    @frozen
     public struct Bounded: ~Copyable {
         /// Element storage: the `Shared` column over the fixed-capacity heap
         /// buffer (`Column.Bounded<Element>` = `Buffer.Linear.Bounded` over
