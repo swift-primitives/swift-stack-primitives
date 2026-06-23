@@ -42,7 +42,6 @@ let package = Package(
         .package(url: "https://github.com/swift-primitives/swift-property-primitives.git", branch: "main"),
         .package(url: "https://github.com/swift-primitives/swift-sequence-primitives.git", branch: "main"),
         .package(url: "https://github.com/swift-primitives/swift-iterator-primitives.git", branch: "main"),
-        .package(url: "https://github.com/swift-primitives/swift-memory-primitives.git", branch: "main"),
         .package(url: "https://github.com/swift-primitives/swift-span-primitives.git", branch: "main"),
         .package(url: "https://github.com/swift-primitives/swift-memory-iterator-primitives.git", branch: "main"),
         .package(url: "https://github.com/swift-primitives/swift-ordinal-primitives.git", branch: "main"),
@@ -66,7 +65,6 @@ let package = Package(
                 .product(name: "Buffer Linear Primitives", package: "swift-buffer-linear-primitives"),
                 .product(name: "Storage Contiguous Primitives", package: "swift-storage-primitives"),
                 .product(name: "Memory Heap Primitives", package: "swift-memory-heap-primitives"),
-                .product(name: "Memory Contiguous Primitives", package: "swift-memory-primitives"),
                 .product(name: "Span Protocol Primitives", package: "swift-span-primitives"),
                 .product(name: "Ordinal Primitives", package: "swift-ordinal-primitives"),
             ]
@@ -87,7 +85,6 @@ let package = Package(
                 .product(name: "Buffer Linear Bounded Primitives", package: "swift-buffer-linear-primitives"),
                 .product(name: "Storage Contiguous Primitives", package: "swift-storage-primitives"),
                 .product(name: "Memory Heap Primitives", package: "swift-memory-heap-primitives"),
-                .product(name: "Memory Contiguous Primitives", package: "swift-memory-primitives"),
                 .product(name: "Span Protocol Primitives", package: "swift-span-primitives"),
                 .product(name: "Ordinal Primitives", package: "swift-ordinal-primitives"),
             ]
