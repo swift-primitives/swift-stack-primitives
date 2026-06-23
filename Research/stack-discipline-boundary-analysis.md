@@ -200,7 +200,7 @@ Unlike the array (which contributes the entire Collection protocol hierarchy), t
 | Element init/move/deinit lifecycle | Via `Storage` |
 | Initialization state tracking | `Storage.Initialization` |
 | Raw pointer access | `pointer(at:)` |
-| Contiguous memory guarantee | `Memory.Contiguous.Protocol` |
+| Contiguous memory guarantee | `Span.Protocol` |
 | Header state machine | `isEmpty`, `isFull` |
 | Unchecked subscript | Direct pointer arithmetic |
 | Inline storage management | `Buffer.Linear.Inline`, `Buffer.Linear.Small` |
