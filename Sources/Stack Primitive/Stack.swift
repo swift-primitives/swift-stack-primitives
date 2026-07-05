@@ -9,190 +9,140 @@
 //
 // ===----------------------------------------------------------------------===//
 
+// MARK: - Stack (the ADT tier — a LIFO stack over the COLUMN)
+//
+// ADT Tower W2 reshape (Research/adt-tower.md §9.3 Stack row; SEAT+principal
+// ratified 2026-07-02). Mirrors the landed heap pilot (swift-heap-primitives) —
+// the seam-op bodies are the append/removeLast shapes of a LIFO stack:
+//   1. thin bound-free carrier `__Stack<S: ~Copyable>` (hoisted per
+//      [API-IMPL-009]/[PKG-NAME-006]; public spelling is the front-door alias
+//      `Stack<E>` in Stack.FrontDoor.swift, [DS-028]);
+//   2. semantic ops written ONCE over the Store/Buffer seams (push/pop are
+//      append/removeLast shapes; the [DS-024] ledger laws keep `count` honest
+//      through them), CoW-correct via `unshare()`, FULL ~Copyable element
+//      support — the LIFO discipline is order-free, so no element bound;
+//   3. growth written ONCE, pinned to the linear column GENERIC over the
+//      allocation (`Resource: Memory.Growable` — the [DS-029] form-2 pin;
+//      stack rides `Buffer.Linear`, so the R-generic pin is the shipped surface).
+//
+// The prior A-1 interim shape (Shared-CoW-default `_buffer`, element-generic
+// public API, Builder/Static variant surface) is REPLACED. The canonical
+// `Stack<E>` is the DIRECT move-only linear column; `Shared` (CoW) returns only
+// consumer-pulled as a `.Shared` front-door variant. The hand-written
+// `Stack.Bounded` TYPE is DELETED for the `.Bounded` capacity-twin front-door
+// alias (Stack.Bounded.swift; the 2026-06-23 directive, §9.6.4).
+
+public import Store_Protocol_Primitives
+public import Buffer_Protocol_Primitives
+public import Buffer_Primitive
 public import Buffer_Linear_Primitive
+public import Storage_Primitive
 public import Storage_Contiguous_Primitives
-public import Memory_Heap_Primitives
-import Index_Primitives
-public import Column_Primitives
-public import Ownership_Shared_Primitive
+public import Memory_Allocator_Primitive
+public import Memory_Allocator_Protocol_Primitives
+public import Index_Primitives
 
-/// A dynamically-growing LIFO stack supporting move-only elements.
+// MARK: 1. The carrier (thin, bound-free; hoisted per [API-IMPL-009])
+
+/// A last-in-first-out (LIFO) stack — the semantic ADT over an explicit storage COLUMN.
 ///
-/// `Stack` is the general-purpose stack primitive. It provides O(1) amortized push
-/// and O(1) pop with automatic capacity growth. This is the canonical stack type—
-/// use it unless you have specific constraints requiring a variant.
+/// `__Stack` is the bound-free carrier ([DS-025]): its column parameter `S` is bound
+/// `~Copyable` **only**; every capability (observability, the seam element ops,
+/// construction/growth) attaches by conditional `@inlinable` extension keyed on the
+/// seams the column conforms (D3). The PUBLIC spelling of the family is the front-door
+/// aliases — `Stack<E>` (canonical) and `Stack<E>.Bounded` (fixed capacity), declared
+/// in `Stack.FrontDoor.swift` / `Stack.Bounded.swift` ([DS-028]); the hoisted name
+/// never appears in consumer signatures.
 ///
-/// ## Example
-///
-/// ```swift
-/// var stack = Stack<Int>()
-/// stack.push(1)
-/// stack.push(2)
-/// stack.pop()        // Optional(2)
-/// stack.peek { $0 }  // Optional(1)
-/// ```
-///
-/// ## Variants
-///
-/// - ``Stack``: Dynamically-growing with amortized O(1) push (this type)
-/// - ``Stack/Bounded``: Fixed-capacity with upfront allocation, throws on overflow
-/// - ``Stack/Static``: Zero-allocation inline storage with compile-time capacity
-///
-/// ## Move-Only Support
-///
-/// Both the stack and its elements can be `~Copyable`:
-///
-/// ```swift
-/// struct FileHandle: ~Copyable { ... }
-/// var handles = Stack<FileHandle>()
-/// handles.push(FileHandle())
-/// ```
-///
-/// ## Iteration
-///
-/// Element traversal is scoped: `forEach` (ops module) and the scoped span forms
-/// (`withSpan` / `withMutableSpan`) borrow the elements in bottom-to-top order.
-/// The protocol-lattice memberships (`Iterable` / `Sequenceable`) are withdrawn
-/// at the A-1 interim reshape — the stored `Shared` column has no returning span
-/// or consuming extraction; they re-materialize when `Shared` gains those
-/// surfaces upstream (recorded as future work).
-///
-/// ```swift
-/// var stack = Stack<Int>()
-/// stack.push(1)
-/// stack.push(2)
-/// stack.forEach { print($0) }  // 1, then 2 — bottom-to-top
-/// ```
-///
-/// ## Copy-on-Write
-///
-/// When `Element` is `Copyable`, `Stack` uses copy-on-write semantics:
-/// copies share storage until mutation, providing efficient value semantics.
-/// The CoW machinery is the ratified `Shared` column (the W4/W5 tower design):
-/// the stored buffer rides a refcounted box whose uniqueness gate
-/// (`withUnique`) runs before every mutation. For `~Copyable` elements the
-/// stack is move-only and the gate is a no-op.
-///
-/// ## Growth Behavior
-///
-/// When capacity is exceeded, the stack allocates new storage at 2x the
-/// current capacity (minimum 4) and moves all elements. This provides
-/// O(1) amortized push with approximately 2.0 copies per element over
-/// the stack's lifetime.
-// WHY: Category D — structural Sendable workaround; the type is
-// WHY: structurally value-safe but the compiler cannot synthesize
-// WHY: Sendable due to a stored pointer / generic parameter shape.
-@safe
+/// Copyability flows from the column: `__Stack<S>` is `Copyable` exactly when `S` is
+/// (the default direct column is move-only by design; the `Shared` CoW column, when a
+/// consumer pulls it, is `Copyable` iff its element is).
+@_documentation(visibility: public)   // symbolgraph-extract drops __-prefixed decls otherwise
 @frozen
-public struct Stack<Element: ~Copyable>: ~Copyable {
+public struct __Stack<S: ~Copyable>: ~Copyable {
 
-    /// Element storage: the `Shared` column over the growable heap buffer
-    /// (`Column.Heap<Element>` = `Buffer.Linear` over system-allocated
-    /// contiguous storage).
-    ///
-    /// Conditional copyability flows from the column (`Ownership.Shared<E, B>` is
-    /// `Copyable` iff `E` is), and value semantics ride the ratified CoW box —
-    /// the A-1 interim reshape (public element-generic API preserved; the
-    /// hand-rolled `ensureUnique` CoW is deleted).
-    ///
-    /// `@usableFromInline package` ([MOD-036] refined-C): the hot
-    /// `~Copyable`/`Copyable` operation surface co-located in this (type)
-    /// module inlines cross-package to zero-witness-dispatch; the cold
-    /// sequence-family ops in the ops module reach this storage through the
-    /// same package-visible field.
+    /// The storage column — a move-only buffer (the default ownership column) or a
+    /// `Shared` CoW column. The ADT is a thin LIFO discipline over it; it carries
+    /// NO deinit (teardown lives in the leaf's oracle / the shared box's drain).
     @usableFromInline
-    package var _buffer: Ownership.Shared<Element, Column.Heap<Element>>
+    package var column: S
 
-    /// Creates an empty stack of move-only elements.
-    ///
-    /// No allocation occurs until the first push. The column is statically
-    /// unique (no clone strategy exists for `~Copyable` elements; the wrapper
-    /// cannot be duplicated).
+    /// Wraps an existing column.
     @inlinable
-    public init() {
-        self._buffer = Ownership.Shared(Column.Heap<Element>(minimumCapacity: .zero))
+    public init(column: consuming S) { self.column = column }
+
+    /// Consumes the stack, yielding its storage column.
+    @inlinable
+    public consuming func take() -> S { column }
+}
+
+extension __Stack: Copyable where S: Copyable {}
+extension __Stack: Sendable where S: Sendable & ~Copyable {}
+
+// MARK: 2. Semantic ops — written ONCE over the seams (any conforming column)
+
+extension __Stack where S: ~Copyable, S: Store.`Protocol` & Buffer.`Protocol` {
+
+    @inlinable
+    public var count: Index<S.Element>.Count { column.count }
+
+    @inlinable
+    public var isEmpty: Bool { column.isEmpty }
+
+    /// Runtime slot coordinate (LIFO index arithmetic happens in raw `Int`).
+    @inlinable
+    func slot(_ k: Int) -> Index<S.Element> {
+        Index(Ordinal(UInt(k)))
     }
 
-    // Note: init(_ elements: Swift.Sequence) is in Stack Primitives (ops)
-    // because it requires push() which is defined there.
-
-    /// Creates a stack of move-only elements with reserved capacity.
+    /// Borrowing access to the top (most-recently-pushed) element.
     ///
-    /// Pre-allocates storage for the specified number of elements.
-    /// Useful when the approximate number of elements is known.
+    /// Precondition-gated (traps on empty), NOT Optional-returning: there is no
+    /// Optional *borrow* of a `~Copyable` element (an `Element?` borrow is
+    /// structurally unavailable), so `top` cannot vend `Element?` by borrow —
+    /// unlike `pop`, which consumes and returns `Element?`. Guard with `isEmpty`.
     ///
-    /// - Parameter capacity: Number of elements to reserve space for.
+    /// - Precondition: The stack must not be empty.
     @inlinable
-    public init(reservingCapacity capacity: Index.Count) {
-        self._buffer = Ownership.Shared(Column.Heap<Element>(minimumCapacity: capacity))
+    public var top: S.Element {
+        _read { yield column[slot(Int(clamping: count) - 1)] }
+    }
+
+    /// Removes and returns the top element, or `nil` if the stack is empty
+    /// (seam-generic; the removeLast shape — no growth involved).
+    ///
+    /// Returns `Element?` — the tower-wide remove-from-empty convention
+    /// (adt-tower.md:1247; the landed `Queue.dequeue()` model). Consuming an
+    /// `Element?` is available even for `~Copyable` elements (unlike a borrow —
+    /// see `top`). The empty case is checked and returns `nil` BEFORE
+    /// `column.unshare()` — the empty path has nothing to mutate, so it takes no
+    /// CoW uniqueness check.
+    @inlinable
+    public mutating func pop() -> S.Element? {
+        let n = Int(clamping: count)
+        if n == 0 { return nil }
+        column.unshare()
+        return column.move(at: slot(n - 1))
     }
 }
 
-// MARK: - Construction (Copyable twins — the clone-capturing sites)
+// MARK: 3. Growth — written ONCE, allocation-GENERIC ([DS-029] form-2 R-generic pin)
 
-// `Shared`'s constructors split on element copyability: the `Copyable` overload
-// captures the column's deep-copy strategy so a shared box can restore
-// uniqueness; the `~Copyable` overload captures none. The split must surface at
-// STACK construction too — a `Copyable`-element stack constructed through the
-// `~Copyable` path would carry a box that cannot restore uniqueness. At
-// `Copyable` call sites the more-constrained twin wins.
+extension __Stack where S: ~Copyable {
 
-extension Stack where Element: Copyable {
-    /// Creates an empty stack (CoW-capable column; the clone strategy is
-    /// captured here).
-    ///
-    /// No allocation occurs until the first push.
+    /// Creates an empty stack on any growable linear column.
     @inlinable
-    public init() {
-        self._buffer = Ownership.Shared(Column.Heap<Element>(minimumCapacity: .zero))
+    public init<E: ~Copyable, Resource: Memory.Growable & ~Copyable>(
+        minimumCapacity: Index<E>.Count = Index<E>.Count(4)
+    ) where S == Buffer<Storage<Memory.Allocator<Resource>>.Contiguous<E>>.Linear {
+        self.init(column: S(minimumCapacity: minimumCapacity))
     }
 
-    /// Creates a stack with reserved capacity (CoW-capable column; the clone
-    /// strategy is captured here).
-    ///
-    /// - Parameter capacity: Number of elements to reserve space for.
+    /// Pushes an element onto the top (grow-if-full rides the column's own R-generic append).
     @inlinable
-    public init(reservingCapacity capacity: Index.Count) {
-        self._buffer = Ownership.Shared(Column.Heap<Element>(minimumCapacity: capacity))
+    public mutating func push<E: ~Copyable, Resource: Memory.Growable & ~Copyable>(
+        _ element: consuming E
+    ) where S == Buffer<Storage<Memory.Allocator<Resource>>.Contiguous<E>>.Linear {
+        column.append(element)
     }
 }
-
-// MARK: - Conditional Copyable
-
-/// `Stack` is `Copyable` when its elements are `Copyable`.
-///
-/// Copyability flows from the stored column: `Ownership.Shared<Element, B>` is
-/// `Copyable` exactly when `Element` is. Copies share the box until the first
-/// mutation restores uniqueness (the `withUnique` gate).
-extension Stack: Copyable where Element: Copyable {}
-
-// MARK: - Sendable
-
-/// `Stack` is `Sendable` when its elements are `Sendable`.
-///
-/// ## Safety Invariant
-///
-/// The stored `Shared` column is mutated exclusively through its uniqueness
-/// gate (`withUnique` restores uniqueness FIRST), so a box shared between two
-/// `Copyable`-element stack values is never written while shared — the stdlib
-/// CoW-Sendable discipline. For `~Copyable` elements the stack is move-only:
-/// at most one owner exists, and the box moves with it.
-///
-/// ## Intended Use
-///
-/// - Transferring a prepared stack to a worker thread.
-/// - Handing off a stack of `~Copyable` resources across actors.
-/// - Actor-owned stacks constructed outside the actor and passed in at init.
-///
-/// ## Non-Goals
-///
-/// - Does not support concurrent access from multiple threads.
-/// - This conformance does not make arbitrary sharing safe — mutation requires
-///   exclusive access to the stack value itself.
-///
-/// `Element: ~Copyable & Sendable` — the suppression is load-bearing: a bare
-/// `Element: Sendable` clause implicitly requires `Element: Copyable`, which
-/// excluded exactly the move-only handoff documented above (arc-1 finding
-/// W3-F1, REPORT-arc-shared-soundness-W3 §1; fix principal-ratified
-/// 2026-06-11).
-extension Stack: @unsafe @unchecked Sendable where Element: ~Copyable & Sendable {}
