@@ -14,7 +14,7 @@ public import Storage_Contiguous_Primitives
 public import Buffer_Linear_Bounded_Primitive
 public import Index_Primitives
 public import Column_Primitives
-public import Shared_Primitive
+public import Ownership_Shared_Primitive
 
 extension Stack where Element: ~Copyable {
 
@@ -92,7 +92,7 @@ extension Stack where Element: ~Copyable {
         /// buffer (`Column.Bounded<Element>` = `Buffer.Linear.Bounded` over
         /// system-allocated contiguous storage).
         ///
-        /// Conditional copyability flows from the column (`Shared<E, B>` is
+        /// Conditional copyability flows from the column (`Ownership.Shared<E, B>` is
         /// `Copyable` iff `E` is), and value semantics ride the ratified CoW
         /// box — the A-1 interim reshape (public element-generic API
         /// preserved; the hand-rolled `ensureUnique` CoW is deleted).
@@ -103,7 +103,7 @@ extension Stack where Element: ~Copyable {
         /// sequence-family ops in the ops module reach this storage through
         /// the same package-visible field.
         @usableFromInline
-        package var _buffer: Shared<Element, Column.Bounded<Element>>
+        package var _buffer: Ownership.Shared<Element, Column.Bounded<Element>>
 
         /// The requested capacity (for overflow checking).
         ///
@@ -140,7 +140,7 @@ extension Stack.Bounded where Element: ~Copyable {
     /// - Parameter capacity: Maximum number of elements.
     @inlinable
     public init(capacity: Index_Primitives.Index<Element>.Count) {
-        self._buffer = Shared(Column.Bounded<Element>(minimumCapacity: capacity))
+        self._buffer = Ownership.Shared(Column.Bounded<Element>(minimumCapacity: capacity))
         self.requestedCapacity = capacity
     }
 }
@@ -152,7 +152,7 @@ extension Stack.Bounded where Element: Copyable {
     /// - Parameter capacity: Maximum number of elements.
     @inlinable
     public init(capacity: Index_Primitives.Index<Element>.Count) {
-        self._buffer = Shared(Column.Bounded<Element>(minimumCapacity: capacity))
+        self._buffer = Ownership.Shared(Column.Bounded<Element>(minimumCapacity: capacity))
         self.requestedCapacity = capacity
     }
 }
@@ -161,7 +161,7 @@ extension Stack.Bounded where Element: Copyable {
 
 /// `Stack.Bounded` is `Copyable` when its elements are `Copyable`.
 ///
-/// Copyability flows from the stored column: `Shared<Element, B>` is
+/// Copyability flows from the stored column: `Ownership.Shared<Element, B>` is
 /// `Copyable` exactly when `Element` is. Copies share the box until the first
 /// mutation restores uniqueness (the `withUnique` gate).
 extension Stack.Bounded: Copyable where Element: Copyable {}

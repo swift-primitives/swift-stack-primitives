@@ -12,7 +12,7 @@
 public import Buffer_Linear_Primitive
 public import Memory_Heap_Primitives
 public import Storage_Contiguous_Primitives
-public import Shared_Primitive
+public import Ownership_Shared_Primitive
 import Index_Primitives
 import Ordinal_Primitives
 

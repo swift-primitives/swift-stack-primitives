@@ -30,7 +30,7 @@ let package = Package(
     dependencies: [
         .package(url: "https://github.com/swift-primitives/swift-index-primitives.git", branch: "main"),
         .package(url: "https://github.com/swift-primitives/swift-column-primitives.git", branch: "main"),
-        .package(url: "https://github.com/swift-primitives/swift-shared-primitives.git", branch: "main"),
+        .package(url: "https://github.com/swift-primitives/swift-ownership-shared-primitives.git", branch: "main"),
         // W2 mesh: buffer packages on their  worktrees so every path to memory
         // unifies on identity swift-memory-primitives (collision resolved).
         .package(url: "https://github.com/swift-primitives/swift-buffer-primitives.git", branch: "main"),
@@ -57,7 +57,7 @@ let package = Package(
             name: "Stack Primitive",
             dependencies: [
                 .product(name: "Column Primitives", package: "swift-column-primitives"),
-                .product(name: "Shared Primitive", package: "swift-shared-primitives"),
+                .product(name: "Ownership Shared Primitive", package: "swift-ownership-shared-primitives"),
                 .product(name: "Equation Primitives Standard Library Integration", package: "swift-equation-primitives"),
                 .product(name: "Hash Primitives Standard Library Integration", package: "swift-hash-primitives"),
                 .product(name: "Index Primitives", package: "swift-index-primitives"),
@@ -75,7 +75,7 @@ let package = Package(
             name: "Stack Bounded Primitive",
             dependencies: [
                 .product(name: "Column Primitives", package: "swift-column-primitives"),
-                .product(name: "Shared Primitive", package: "swift-shared-primitives"),
+                .product(name: "Ownership Shared Primitive", package: "swift-ownership-shared-primitives"),
                 .product(name: "Equation Protocol Primitives", package: "swift-equation-primitives"),
                 .product(name: "Hash Protocol Primitives", package: "swift-hash-primitives"),
                 "Stack Primitive",
@@ -99,7 +99,7 @@ let package = Package(
             name: "Stack Bounded Primitives",
             dependencies: [
                 .product(name: "Column Primitives", package: "swift-column-primitives"),
-                .product(name: "Shared Primitive", package: "swift-shared-primitives"),
+                .product(name: "Ownership Shared Primitive", package: "swift-ownership-shared-primitives"),
                 "Stack Bounded Primitive",
                 "Stack Primitive",
                 .product(name: "Index Primitives", package: "swift-index-primitives"),
@@ -124,7 +124,7 @@ let package = Package(
             name: "Stack Primitives",
             dependencies: [
                 .product(name: "Column Primitives", package: "swift-column-primitives"),
-                .product(name: "Shared Primitive", package: "swift-shared-primitives"),
+                .product(name: "Ownership Shared Primitive", package: "swift-ownership-shared-primitives"),
                 "Stack Primitive",
                 "Stack Bounded Primitive",
                 "Stack Bounded Primitives",

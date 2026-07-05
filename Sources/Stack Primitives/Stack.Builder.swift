@@ -11,7 +11,7 @@
 
 public import Buffer_Linear_Primitives
 public import Stack_Primitive
-public import Shared_Primitive
+public import Ownership_Shared_Primitive
 
 extension Stack where Element: ~Copyable {
     /// A result builder for declaratively constructing stacks.

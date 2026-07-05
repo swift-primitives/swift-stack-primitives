@@ -10,7 +10,7 @@
 // ===----------------------------------------------------------------------===//
 
 public import Stack_Primitive
-public import Shared_Primitive
+public import Ownership_Shared_Primitive
 public import Buffer_Linear_Primitive
 
 // MARK: - forEach (scoped traversal)

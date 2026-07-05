@@ -13,7 +13,7 @@ public import Stack_Primitive
 public import Stack_Bounded_Primitive
 public import Index_Primitives
 import Buffer_Linear_Primitives
-import Shared_Primitive
+import Ownership_Shared_Primitive
 
 // MARK: - Variant `@Stack.Builder` DSL inits
 //

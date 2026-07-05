@@ -14,7 +14,7 @@ public import Storage_Contiguous_Primitives
 public import Memory_Heap_Primitives
 import Index_Primitives
 public import Column_Primitives
-public import Shared_Primitive
+public import Ownership_Shared_Primitive
 
 /// A dynamically-growing LIFO stack supporting move-only elements.
 ///
@@ -90,7 +90,7 @@ public struct Stack<Element: ~Copyable>: ~Copyable {
     /// (`Column.Heap<Element>` = `Buffer.Linear` over system-allocated
     /// contiguous storage).
     ///
-    /// Conditional copyability flows from the column (`Shared<E, B>` is
+    /// Conditional copyability flows from the column (`Ownership.Shared<E, B>` is
     /// `Copyable` iff `E` is), and value semantics ride the ratified CoW box —
     /// the A-1 interim reshape (public element-generic API preserved; the
     /// hand-rolled `ensureUnique` CoW is deleted).
@@ -101,7 +101,7 @@ public struct Stack<Element: ~Copyable>: ~Copyable {
     /// sequence-family ops in the ops module reach this storage through the
     /// same package-visible field.
     @usableFromInline
-    package var _buffer: Shared<Element, Column.Heap<Element>>
+    package var _buffer: Ownership.Shared<Element, Column.Heap<Element>>
 
     /// Creates an empty stack of move-only elements.
     ///
@@ -110,7 +110,7 @@ public struct Stack<Element: ~Copyable>: ~Copyable {
     /// cannot be duplicated).
     @inlinable
     public init() {
-        self._buffer = Shared(Column.Heap<Element>(minimumCapacity: .zero))
+        self._buffer = Ownership.Shared(Column.Heap<Element>(minimumCapacity: .zero))
     }
 
     // Note: init(_ elements: Swift.Sequence) is in Stack Primitives (ops)
@@ -124,7 +124,7 @@ public struct Stack<Element: ~Copyable>: ~Copyable {
     /// - Parameter capacity: Number of elements to reserve space for.
     @inlinable
     public init(reservingCapacity capacity: Index.Count) {
-        self._buffer = Shared(Column.Heap<Element>(minimumCapacity: capacity))
+        self._buffer = Ownership.Shared(Column.Heap<Element>(minimumCapacity: capacity))
     }
 }
 
@@ -144,7 +144,7 @@ extension Stack where Element: Copyable {
     /// No allocation occurs until the first push.
     @inlinable
     public init() {
-        self._buffer = Shared(Column.Heap<Element>(minimumCapacity: .zero))
+        self._buffer = Ownership.Shared(Column.Heap<Element>(minimumCapacity: .zero))
     }
 
     /// Creates a stack with reserved capacity (CoW-capable column; the clone
@@ -153,7 +153,7 @@ extension Stack where Element: Copyable {
     /// - Parameter capacity: Number of elements to reserve space for.
     @inlinable
     public init(reservingCapacity capacity: Index.Count) {
-        self._buffer = Shared(Column.Heap<Element>(minimumCapacity: capacity))
+        self._buffer = Ownership.Shared(Column.Heap<Element>(minimumCapacity: capacity))
     }
 }
 
@@ -161,7 +161,7 @@ extension Stack where Element: Copyable {
 
 /// `Stack` is `Copyable` when its elements are `Copyable`.
 ///
-/// Copyability flows from the stored column: `Shared<Element, B>` is
+/// Copyability flows from the stored column: `Ownership.Shared<Element, B>` is
 /// `Copyable` exactly when `Element` is. Copies share the box until the first
 /// mutation restores uniqueness (the `withUnique` gate).
 extension Stack: Copyable where Element: Copyable {}

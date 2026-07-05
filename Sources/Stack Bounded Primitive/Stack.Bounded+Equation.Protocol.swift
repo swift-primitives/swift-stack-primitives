@@ -11,7 +11,7 @@
 
 public import Stack_Primitive
 public import Equation_Protocol_Primitives
-public import Shared_Primitive
+public import Ownership_Shared_Primitive
 public import Index_Primitives
 import Ordinal_Primitives
 

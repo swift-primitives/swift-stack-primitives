@@ -10,7 +10,7 @@
 // ===----------------------------------------------------------------------===//
 
 public import Hash_Primitives_Standard_Library_Integration
-public import Shared_Primitive
+public import Ownership_Shared_Primitive
 public import Index_Primitives
 import Ordinal_Primitives
 
