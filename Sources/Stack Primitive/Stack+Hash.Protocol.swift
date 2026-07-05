@@ -35,3 +35,12 @@ extension Stack: Hash.`Protocol` where Element: Hash.`Protocol` & ~Copyable {
         }
     }
 }
+
+#if swift(>=6.4)
+// Swift 6.4+ (SE-0499): `Hash.`Protocol`` refines `Swift.Hashable`, and a conditional
+// conformance to a refining protocol no longer implies the inherited `Swift.Hashable`
+// conformance — state it explicitly. The `hash(into:)` above (through the
+// `Hash.`Protocol`` conformance) witnesses it. Matches the swift-product-primitives
+// precedent.
+extension Stack: Swift.Hashable where Element: Hash.`Protocol` & ~Copyable {}
+#endif
