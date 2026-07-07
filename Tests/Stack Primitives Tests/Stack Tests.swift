@@ -9,8 +9,9 @@
 //
 // ===----------------------------------------------------------------------===//
 
-import Testing
 import Index_Primitives
+import Testing
+
 @testable import Stack_Primitives
 
 // MARK: - Fixtures
@@ -56,7 +57,7 @@ struct StackTests {
         var drained: [Int] = []
         while let next = s.pop() { drained.append(next) }
         let empty = s.isEmpty
-        let overDrain = s.pop()          // pop on empty -> nil (the convention)
+        let overDrain = s.pop()  // pop on empty -> nil (the convention)
         #expect(drained == [7, 25, 3, 42])
         #expect(empty)
         #expect(overDrain == nil)
@@ -65,12 +66,18 @@ struct StackTests {
     @Test("top tracks the most-recently-pushed element")
     func topTracking() {
         var s = Stack<Int>()
-        s.push(9); let t0 = s.top; #expect(t0 == 9)
-        s.push(4); let t1 = s.top; #expect(t1 == 4)
-        s.push(8); let t2 = s.top; #expect(t2 == 8)
+        s.push(9)
+        let t0 = s.top
+        #expect(t0 == 9)
+        s.push(4)
+        let t1 = s.top
+        #expect(t1 == 4)
+        s.push(8)
+        let t2 = s.top
+        #expect(t2 == 8)
         let popped = s.pop()
         let t3 = s.top
-        #expect(popped == 8)          // Int? == Int-literal (Optional promotion)
+        #expect(popped == 8)  // Int? == Int-literal (Optional promotion)
         #expect(t3 == 4)
     }
 

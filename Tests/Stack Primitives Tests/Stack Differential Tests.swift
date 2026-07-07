@@ -38,8 +38,8 @@ struct StackDifferentialTests {
     @Test("600 mixed ops: duplicates, interleaved push/pop, growth across reallocations")
     func differentialAgainstArrayOracle() {
         var rng = SplitMix64(seed: 0x5EED_1234_ABCD_0001)
-        var stack = Stack<Int>()        // default capacity -> repeated growth under the push bias
-        var oracle: [Int] = []          // trivially-correct LIFO multiset (append / removeLast)
+        var stack = Stack<Int>()  // default capacity -> repeated growth under the push bias
+        var oracle: [Int] = []  // trivially-correct LIFO multiset (append / removeLast)
 
         let totalOps = 600
         var pushes = 0
@@ -57,7 +57,7 @@ struct StackDifferentialTests {
             } else {
                 let expected = oracle.removeLast()
                 let got = stack.pop()
-                #expect(got == expected)   // the top matches the oracle at EVERY step
+                #expect(got == expected)  // the top matches the oracle at EVERY step
                 interleavedPops += 1
             }
         }
@@ -76,7 +76,7 @@ struct StackDifferentialTests {
 
         // Shape sanity: the workload actually exercised both ops and forced growth.
         #expect(pushes + interleavedPops == totalOps)
-        #expect(pushes >= 300)             // >> default capacity -> reallocations occurred
-        #expect(interleavedPops >= 100)    // genuinely interleaved, not build-then-drain
+        #expect(pushes >= 300)  // >> default capacity -> reallocations occurred
+        #expect(interleavedPops >= 100)  // genuinely interleaved, not build-then-drain
     }
 }

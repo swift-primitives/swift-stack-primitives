@@ -32,15 +32,15 @@
 // `Stack.Bounded` TYPE is DELETED for the `.Bounded` capacity-twin front-door
 // alias (Stack.Bounded.swift; the 2026-06-23 directive, §9.6.4).
 
-public import Store_Protocol_Primitives
-public import Buffer_Protocol_Primitives
-public import Buffer_Primitive
 public import Buffer_Linear_Primitive
-public import Storage_Primitive
-public import Storage_Contiguous_Primitives
+public import Buffer_Primitive
+public import Buffer_Protocol_Primitives
+public import Index_Primitives
 public import Memory_Allocator_Primitive
 public import Memory_Allocator_Protocol_Primitives
-public import Index_Primitives
+public import Storage_Contiguous_Primitives
+public import Storage_Primitive
+public import Store_Protocol_Primitives
 
 // MARK: 1. The carrier (thin, bound-free; hoisted per [API-IMPL-009])
 
@@ -57,13 +57,15 @@ public import Index_Primitives
 /// Copyability flows from the column: `__Stack<S>` is `Copyable` exactly when `S` is
 /// (the default direct column is move-only by design; the `Shared` CoW column, when a
 /// consumer pulls it, is `Copyable` iff its element is).
-@_documentation(visibility: public)   // symbolgraph-extract drops __-prefixed decls otherwise
+@_documentation(visibility: public)  // symbolgraph-extract drops __-prefixed decls otherwise
 @frozen
 public struct __Stack<S: ~Copyable>: ~Copyable {
 
     /// The storage column — a move-only buffer (the default ownership column) or a
-    /// `Shared` CoW column. The ADT is a thin LIFO discipline over it; it carries
-    /// NO deinit (teardown lives in the leaf's oracle / the shared box's drain).
+    /// `Shared` CoW column.
+    ///
+    /// The ADT is a thin LIFO discipline over it; it carries NO deinit (teardown
+    /// lives in the leaf's oracle / the shared box's drain).
     @usableFromInline
     package var column: S
 
@@ -83,9 +85,11 @@ extension __Stack: Sendable where S: Sendable & ~Copyable {}
 
 extension __Stack where S: ~Copyable, S: Store.`Protocol` & Buffer.`Protocol` {
 
+    /// The number of elements in the stack.
     @inlinable
     public var count: Index<S.Element>.Count { column.count }
 
+    /// Whether the stack has no elements.
     @inlinable
     public var isEmpty: Bool { column.isEmpty }
 
@@ -105,6 +109,13 @@ extension __Stack where S: ~Copyable, S: Store.`Protocol` & Buffer.`Protocol` {
     /// - Precondition: The stack must not be empty.
     @inlinable
     public var top: S.Element {
+        // reason: precondition-gated by `isEmpty` above the call site, so the count
+        // is at least one here; this computes the raw-Int slot of the last element.
+        // No typed Cardinal/Ordinal "last slot" helper exists yet in Index_Primitives
+        // (verified: no such API on the typed count) — escalating per [INFRA-025]
+        // rather than inventing one ad hoc. Same shape pre-exists unshielded in
+        // swift-heap-primitives Heap.swift:205 (the pilot this file mirrors).
+        // swiftlint:disable:next cardinal_count_minus_one_evasion
         _read { yield column[slot(Int(clamping: count) - 1)] }
     }
 

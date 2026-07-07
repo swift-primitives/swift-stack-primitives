@@ -9,8 +9,9 @@
 //
 // ===----------------------------------------------------------------------===//
 
-import Testing
 import Index_Primitives
+import Testing
+
 @testable import Stack_Primitives
 
 // MARK: - Stack<E>.Bounded (fixed-capacity — the capacity-twin front door)
@@ -43,7 +44,7 @@ struct StackBoundedTests {
             try s.push(4)
             Issue.record("expected Stack.Error.full on overflow")
         } catch {
-            caught = error       // typed-throws: `error` is `Stack<Int>.Bounded.Error`
+            caught = error  // typed-throws: `error` is `Stack<Int>.Bounded.Error`
         }
         let countAfter = s.count
         let topAfter = s.top
