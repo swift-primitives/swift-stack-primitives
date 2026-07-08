@@ -95,7 +95,7 @@ extension __Stack where S: ~Copyable, S: Store.`Protocol` & Buffer.`Protocol` {
 
     /// Runtime slot coordinate (LIFO index arithmetic happens in raw `Int`).
     @inlinable
-    func slot(_ k: Int) -> Index<S.Element> {
+    package func slot(_ k: Int) -> Index<S.Element> {
         Index(Ordinal(UInt(k)))
     }
 
