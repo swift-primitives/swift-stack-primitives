@@ -36,8 +36,8 @@ private typealias StackColumn<E: ~Copyable> =
 private typealias StackBoundedColumn<E: ~Copyable> =
     Buffer<Storage<Memory.Allocator<Memory.Heap>>.Contiguous<E>>.Linear.Bounded
 
-@Suite("Stack seam laws")
-struct StackSeamTests {
+@Suite
+struct `Stack Seam Tests` {
 
     @Test
     func `[DS-024] Seam.Ledger laws hold for the canonical Stack column`() {

@@ -35,8 +35,8 @@ extension SplitMix64 {
     }
 }
 
-@Suite("Stack differential (vs array oracle)")
-struct StackDifferentialTests {
+@Suite
+struct `Stack Differential Tests` {
 
     @Test
     func `600 mixed ops: duplicates, interleaved push/pop, growth across reallocations`() {
