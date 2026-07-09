@@ -31,8 +31,8 @@ private struct Token: ~Copyable {
 // `#expect` — the property-access `#expect` form would otherwise require the
 // move-only value to copy.
 
-@Suite("Stack (last-in-first-out)")
-struct StackTests {
+@Suite
+struct `Stack Tests` {
 
     @Test
     func `empty stack reports isEmpty and count 0`() {

@@ -21,8 +21,8 @@ import Testing
 // push/init pin per column. Push on the bounded column throws `Error.full` (the decreed
 // `throws(Overflow)` op form, M10 per-family error).
 
-@Suite("Stack.Bounded (fixed-capacity)")
-struct StackBoundedTests {
+@Suite
+struct `Stack.Bounded Tests` {
 
     @Test
     func `push up to capacity, then push throws Error.full (rejected element destroyed)`() throws {
