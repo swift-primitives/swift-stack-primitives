@@ -24,8 +24,8 @@ import Testing
 @Suite("Stack.Bounded (fixed-capacity)")
 struct StackBoundedTests {
 
-    @Test("push up to capacity, then push throws Error.full (rejected element destroyed)")
-    func overflowThrows() throws {
+    @Test
+    func `push up to capacity, then push throws Error.full (rejected element destroyed)`() throws {
         var s = Stack<Int>.Bounded(capacity: Index<Int>.Count(3))
         try s.push(1)
         try s.push(2)
@@ -40,7 +40,7 @@ struct StackBoundedTests {
         // BOUNDED instantiation (`Stack<Int>.Bounded.Error`, matching the landed
         // `Queue<E>.Bounded.Error`) — the typed-throws error `s.push` raises.
         var caught: Stack<Int>.Bounded.Error?
-        do {
+        do throws(Stack<Int>.Bounded.Error) {
             try s.push(4)
             Issue.record("expected Stack.Error.full on overflow")
         } catch {
@@ -53,8 +53,8 @@ struct StackBoundedTests {
         #expect(topAfter == 3)
     }
 
-    @Test("bounded pop yields LIFO order and drains to nil")
-    func lifoDrain() throws {
+    @Test
+    func `bounded pop yields LIFO order and drains to nil`() throws {
         var s = Stack<Int>.Bounded(capacity: Index<Int>.Count(4))
         try s.push(10)
         try s.push(20)

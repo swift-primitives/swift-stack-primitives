@@ -23,6 +23,9 @@ import Testing
 private struct SplitMix64: RandomNumberGenerator {
     var state: UInt64
     init(seed: UInt64) { self.state = seed }
+}
+
+extension SplitMix64 {
     mutating func next() -> UInt64 {
         state = state &+ 0x9E37_79B9_7F4A_7C15
         var z = state
@@ -35,8 +38,8 @@ private struct SplitMix64: RandomNumberGenerator {
 @Suite("Stack differential (vs array oracle)")
 struct StackDifferentialTests {
 
-    @Test("600 mixed ops: duplicates, interleaved push/pop, growth across reallocations")
-    func differentialAgainstArrayOracle() {
+    @Test
+    func `600 mixed ops: duplicates, interleaved push/pop, growth across reallocations`() {
         var rng = SplitMix64(seed: 0x5EED_1234_ABCD_0001)
         var stack = Stack<Int>()  // default capacity -> repeated growth under the push bias
         var oracle: [Int] = []  // trivially-correct LIFO multiset (append / removeLast)

@@ -39,8 +39,8 @@ private typealias StackBoundedColumn<E: ~Copyable> =
 @Suite("Stack seam laws")
 struct StackSeamTests {
 
-    @Test("[DS-024] Seam.Ledger laws hold for the canonical Stack column")
-    func canonicalColumnLedgerLaws() {
+    @Test
+    func `[DS-024] Seam.Ledger laws hold for the canonical Stack column`() {
         let violations = Seam.Ledger.violations(
             makeEmpty: { StackColumn<Int>(minimumCapacity: Index<Int>.Count(4)) },
             element: { $0 }
@@ -48,8 +48,8 @@ struct StackSeamTests {
         #expect(violations.isEmpty, "\(violations)")
     }
 
-    @Test("[DS-024] Seam.Ledger laws hold for the Stack.Bounded column")
-    func boundedColumnLedgerLaws() {
+    @Test
+    func `[DS-024] Seam.Ledger laws hold for the Stack.Bounded column`() {
         let violations = Seam.Ledger.violations(
             makeEmpty: { StackBoundedColumn<Int>(minimumCapacity: Index<Int>.Count(64)) },
             element: { $0 }

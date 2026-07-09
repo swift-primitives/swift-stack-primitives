@@ -34,8 +34,8 @@ private struct Token: ~Copyable {
 @Suite("Stack (last-in-first-out)")
 struct StackTests {
 
-    @Test("empty stack reports isEmpty and count 0")
-    func emptyState() {
+    @Test
+    func `empty stack reports isEmpty and count 0`() {
         let s = Stack<Int>()
         let empty = s.isEmpty
         let count = s.count
@@ -43,8 +43,8 @@ struct StackTests {
         #expect(count == Index<Int>.Count(0))
     }
 
-    @Test("push then pop yields last-in-first-out order")
-    func lifoOrdering() {
+    @Test
+    func `push then pop yields last-in-first-out order`() {
         var s = Stack<Int>()
         for value in [42, 3, 25, 7] { s.push(value) }
         let nonEmpty = !s.isEmpty
@@ -63,8 +63,8 @@ struct StackTests {
         #expect(overDrain == nil)
     }
 
-    @Test("top tracks the most-recently-pushed element")
-    func topTracking() {
+    @Test
+    func `top tracks the most-recently-pushed element`() {
         var s = Stack<Int>()
         s.push(9)
         let t0 = s.top
@@ -81,8 +81,8 @@ struct StackTests {
         #expect(t3 == 4)
     }
 
-    @Test("single-element stack: push, top, pop")
-    func singleElement() {
+    @Test
+    func `single-element stack: push, top, pop`() {
         var s = Stack<Int>()
         s.push(17)
         let count = s.count
@@ -97,8 +97,8 @@ struct StackTests {
         #expect(overDrain == nil)
     }
 
-    @Test("~Copyable elements flow through push/pop/top")
-    func moveOnlyElements() {
+    @Test
+    func `~Copyable elements flow through push/pop/top`() {
         var s = Stack<Token>()
         s.push(Token(5))
         s.push(Token(1))
@@ -113,8 +113,8 @@ struct StackTests {
         #expect(empty)
     }
 
-    @Test("growth past the initial capacity preserves LIFO order")
-    func growthPreservesOrder() {
+    @Test
+    func `growth past the initial capacity preserves LIFO order`() {
         var s = Stack<Int>(minimumCapacity: Index<Int>.Count(2))
         for value in 1...64 { s.push(value) }
         let count = s.count
